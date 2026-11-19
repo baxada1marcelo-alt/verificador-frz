@@ -60,6 +60,9 @@
   canvas{width:100%;height:auto;display:block;border-radius:6px;border:1px solid var(--line);background:#efece5;cursor:crosshair}
   .maptools{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;font-size:13px}
   .maptools select{width:auto;padding:5px 8px}
+  .altbox{display:flex;gap:6px}
+  .altbox input{flex:1;min-width:0}
+  .altbox select{width:auto;flex:none;padding:9px 6px}
   .maptools input[type=range]{width:110px;padding:0}
   #lmap{height:520px;border-radius:6px;border:1px solid var(--line);background:#2a2f36;cursor:crosshair}
   @media (max-width:600px){#lmap{height:400px}}
@@ -95,7 +98,7 @@
 <header>
   <h1>Verificador FRZ e Áreas Restritas – RS</h1>
   <span class="sub">Consulta rápida: o voo do drone entra em Zona de Restrição de Voo? Precisa de Termo de Coordenação?</span>
-  <span class="ver">v9 · 19/11/2026</span>
+  <span class="ver">v10 · 19/11/2026</span>
 </header>
 
 <main>
@@ -109,13 +112,16 @@
 
       <div class="row">
         <div>
-          <label for="alt">Altura máxima (ft)</label>
-          <input id="alt" type="number" min="0" step="10" value="200">
+          <label for="alt">Altura máxima</label>
+          <div class="altbox">
+            <input id="alt" type="number" min="0" step="any" value="200">
+            <select id="altUn" aria-label="Unidade da altura"><option value="ft">pés (ft)</option><option value="m">metros</option></select>
+          </div>
           <div class="hint" id="altm">≈ 61 m acima do solo</div>
         </div>
         <div>
           <label for="raio">Raio da área (m)</label>
-          <input id="raio" type="number" min="0" step="50" value="0">
+          <input id="raio" type="number" min="0" step="any" value="0">
           <div class="hint">0 = só o ponto</div>
         </div>
       </div>
@@ -227,6 +233,13 @@ let estado = { lat: null, lon: null, centro: null };
 
 function fmtN(n){ return Math.round(n).toLocaleString('pt-BR'); }
 function ftToM(ft){ return ft*0.3048; }
+// Unidade da altura: o cálculo é sempre feito em pés (as tabelas da ICA 100-40 estão em ft); 1 ft = 0,3048 m.
+function fmt1(n){ return (Math.round(n*10)/10).toLocaleString('pt-BR'); }
+function unidadeAlt(){ return $('altUn').value; }
+function altEmFt(){ const v = Math.max(0, parseFloat($('alt').value) || 0); return unidadeAlt() === 'm' ? Math.round(v/0.3048*1000)/1000 : v; }
+function altTxt(ft){ return unidadeAlt() === 'm' ? fmt1(ftToM(ft)) + ' m (' + fmt1(ft) + ' ft)' : fmt1(ft) + ' ft'; }
+function dicaAlt(){ const v = parseFloat($('alt').value) || 0;
+  $('altm').textContent = unidadeAlt() === 'm' ? '≈ ' + fmt1(v/0.3048) + ' ft acima do solo' : '≈ ' + fmtN(ftToM(v)) + ' m acima do solo'; }
 
 function parseCoord(txt){
   const s = txt.trim().toUpperCase();
@@ -275,9 +288,9 @@ function explicar(r, alt){
     : `no <b>entorno do aeródromo</b> (ZEA), a ${fmtN(p.dist)} m do eixo da pista ${p.pista}`;
   const piso = p.piso === 0 ? 'desde o solo' : `a partir de ${p.piso} ft`;
   let conc;
-  if(r.status === 'dentro') conc = `O voo vai até ${alt} ft → <b>entra na FRZ</b>.`;
-  else if(r.status === 'fora') conc = alt === p.piso ? `O voo vai até ${alt} ft, exatamente no piso, sem passar dele → <b>não entra</b> (mesmo critério do SARPAS).` : `O voo vai até ${alt} ft, abaixo do piso → <b>não entra</b>.`;
-  else conc = `Último anel (setor ${p.setor}): a FRZ só começa acima de 400 ft e a norma não define até onde esse anel vai. Com ${alt} ft → <b>confirmar no SARPAS</b> (acima de 400 ft já vale a segregação do Art. 25).`;
+  if(r.status === 'dentro') conc = `O voo vai até ${altTxt(alt)} → <b>entra na FRZ</b>.`;
+  else if(r.status === 'fora') conc = alt === p.piso ? `O voo vai até ${altTxt(alt)}, exatamente no piso, sem passar dele → <b>não entra</b> (mesmo critério do SARPAS).` : `O voo vai até ${altTxt(alt)}, abaixo do piso → <b>não entra</b>.`;
+  else conc = `Último anel (setor ${p.setor}): a FRZ só começa acima de 400 ft e a norma não define até onde esse anel vai. Com ${altTxt(alt)} → <b>confirmar no SARPAS</b> (acima de 400 ft já vale a segregação do Art. 25).`;
   return `Parte mais crítica da área ${onde} – setor <b>${p.setor}</b>, FRZ ${piso}. ${conc}`;
 }
 
@@ -321,7 +334,7 @@ function verificar(){
   const c = parseCoord($('coord').value);
   if(!c || !isFinite(c.lat) || !isFinite(c.lon)){ $('errCoord').textContent = 'Coordenada não reconhecida. Ex.: -29.74, -53.65'; return; }
   if(c.lat < -34.5 || c.lat > -26.5 || c.lon < -58.5 || c.lon > -48.5){ $('errCoord').textContent = 'A coordenada está fora do Rio Grande do Sul. Confira os sinais (Sul e Oeste são negativos).'; return; }
-  const alt = Math.max(0, parseFloat($('alt').value) || 0);
+  const alt = altEmFt();
   const raio = Math.max(0, parseFloat($('raio').value) || 0);
   const perfilId = $('perfil').value;
   estado.lat = c.lat; estado.lon = c.lon; estado.centro = [c.lat, c.lon];
@@ -393,7 +406,7 @@ function verificar(){
     <div class="verdict ${cls}"><div class="big">${big}</div><div class="txt">${txt}</div></div>
     <div class="prazo ${pz.cls}"><b>${pz.titulo}</b><br>${pz.txt}</div>
     ${warns.length ? '<ul class="warns">'+warns.map(w=>'<li>'+w+'</li>').join('')+'</ul>' : ''}
-    <div style="font-size:13px;margin-bottom:8px">Ponto: <span class="mono">${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}</span> · <span class="mono">${dmsTxt(c.lat,'N','S')} ${dmsTxt(c.lon,'E','W')}</span> · ${alt} ft (${fmtN(ftToM(alt))} m) · raio ${fmtN(raio)} m · ${PERFIS[perfilId].nome} · <a class="gm" href="${gm}" target="_blank" rel="noopener">ver no Google Maps</a></div>
+    <div style="font-size:13px;margin-bottom:8px">Ponto: <span class="mono">${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}</span> · <span class="mono">${dmsTxt(c.lat,'N','S')} ${dmsTxt(c.lon,'E','W')}</span> · ${unidadeAlt()==='m' ? altTxt(alt) : alt+' ft ('+fmtN(ftToM(alt))+' m)'} · raio ${fmtN(raio)} m · ${PERFIS[perfilId].nome} · <a class="gm" href="${gm}" target="_blank" rel="noopener">ver no Google Maps</a></div>
     ${res.length ? `<table><thead><tr><th>Local</th><th>Distância</th><th>Zona</th><th>Explicação</th><th></th></tr></thead><tbody>${linhas}</tbody></table>` : ''}
     ${eac.length ? `<h2 style="margin:16px 0 6px">Áreas proibidas, restritas e perigosas (AIP ENR 5.1)</h2><table><thead><tr><th>Área</th><th>Distância</th><th>Limites</th><th>Explicação</th><th></th></tr></thead><tbody>${linhasE}</tbody></table>` : ''}
     <div class="hint" style="margin-top:10px">Orientação prévia. A confirmação oficial é feita no SARPAS ao cadastrar o voo.</div>`;
@@ -674,7 +687,7 @@ $('eacFonte').textContent = 'fonte: ' + EAC_FONTE;
 montarFiltro();
 $('limpar').addEventListener('click', () => {
   $('coord').value = '';
-  $('alt').value = 200; $('altm').textContent = '≈ 61 m acima do solo';
+  $('alt').value = unidadeAlt() === 'm' ? 60 : 200; dicaAlt();
   $('raio').value = 0;
   $('inicio').value = '';
   const mudouPerfil = $('perfil').value !== 'recreativa';
@@ -693,7 +706,17 @@ $('f').addEventListener('submit', ev => {
 });
 $('escala').addEventListener('change', desenhar);
 $('perfil').addEventListener('change', () => { if(mapa) atualizarFRZ(); if(estado.lat!==null) verificar(); else desenhar(); });
-$('alt').addEventListener('input', () => { const v = parseFloat($('alt').value)||0; $('altm').textContent = '≈ ' + fmtN(ftToM(v)) + ' m acima do solo'; });
+$('alt').addEventListener('input', dicaAlt);
+// troca de unidade: converte o número que está no campo e lembra a escolha neste navegador
+try { if(localStorage.getItem('unidadeAlt') === 'm'){ $('altUn').value = 'm'; $('alt').value = Math.round(ftToM(parseFloat($('alt').value)||0)); } } catch(e){}
+dicaAlt();
+$('altUn').addEventListener('change', () => {
+  const v = parseFloat($('alt').value);
+  if(isFinite(v)) $('alt').value = unidadeAlt() === 'm' ? Math.round(ftToM(v)*10)/10 : Math.round(v/0.3048*10)/10;
+  dicaAlt();
+  try { localStorage.setItem('unidadeAlt', unidadeAlt()); } catch(e){}
+  if(estado.lat !== null) verificar();
+});
 const g = $('goto');
 g.innerHTML = AERODROMOS.map((ad,i)=>`<option value="${i}">${ad.id} – ${ad.cidade}</option>`).join('');
 g.addEventListener('change', () => { const ad = AERODROMOS[+g.value]; if(mapa) mapa.setView(ad.arp, 12); else { estado.centro = ad.arp.slice(); desenhar(); } });
