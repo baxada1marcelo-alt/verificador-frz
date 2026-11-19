@@ -69,6 +69,17 @@
   .foot{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.5}
   .foot a{color:var(--accent)}
   .empty{color:var(--muted);font-size:14px;padding:18px 0}
+  .ftipos{display:flex;flex-wrap:wrap;gap:6px 16px}
+  .ftipos label,#flista label{display:flex;align-items:center;gap:6px;margin:0;font-weight:500;cursor:pointer}
+  .ftipos input,#flista input{width:auto;margin:0}
+  .sw{width:14px;height:14px;border-radius:3px;display:inline-block}
+  .sw.P{background:rgba(163,34,28,.25);border:2px solid #a3221c} .sw.R{background:rgba(106,27,154,.2);border:2px solid #6a1b9a} .sw.D{background:rgba(230,160,0,.2);border:2px dashed #b07800}
+  #flista{max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:6px;padding:4px 8px}
+  #flista label{font-size:13px;padding:4px 0;border-bottom:1px solid #eee;align-items:flex-start}
+  #flista label .hint{margin:0}
+  #flista label.off{opacity:.5}
+  .mini{font-size:12px;padding:4px 8px;border:1px solid var(--accent);background:#fff;color:var(--accent);border-radius:5px}
+  .mini:hover{background:#eef3f8}
   details{margin-top:12px;font-size:13.5px}
   summary{cursor:pointer;font-weight:600;color:var(--navy)}
   .mono{font-family:"IBM Plex Mono",monospace}
@@ -79,7 +90,7 @@
 <header>
   <h1>Verificador FRZ e Áreas Restritas – RS</h1>
   <span class="sub">Consulta rápida: o voo do drone entra em Zona de Restrição de Voo? Precisa de Termo de Coordenação?</span>
-  <span class="ver">v5 · 19/11/2026</span>
+  <span class="ver">v6 · 19/11/2026</span>
 </header>
 
 <main>
@@ -120,6 +131,26 @@
         <button class="btn sec" type="button" id="limpar">Limpar dados</button>
       </div>
     </form>
+
+    <div class="card" style="margin-top:14px" id="filtroCard">
+      <h2>Filtro das áreas (EAC)</h2>
+      <div class="hint" style="margin:0 0 8px">Áreas desligadas somem do mapa e <b>não entram na verificação</b>. Use para desligar áreas que hoje não estão ativas (ex.: as "ativadas mediante NOTAM").</div>
+      <div class="ftipos">
+        <label><input type="checkbox" data-tipo="P" checked> <i class="sw P"></i>Proibidas</label>
+        <label><input type="checkbox" data-tipo="R" checked> <i class="sw R"></i>Restritas</label>
+        <label><input type="checkbox" data-tipo="D" checked> <i class="sw D"></i>Perigosas</label>
+      </div>
+      <details id="fdet">
+        <summary>Escolher área por área (<span id="fcont"></span>)</summary>
+        <input id="fbusca" placeholder="Procurar por código ou nome (ex.: SBR520, Santa Maria)" style="margin:8px 0">
+        <div style="display:flex;gap:8px;margin-bottom:6px">
+          <button type="button" class="mini" id="fTodas">Ligar todas</button>
+          <button type="button" class="mini" id="fNenhuma">Desligar todas</button>
+          <button type="button" class="mini" id="fNotam">Desligar as "mediante NOTAM"</button>
+        </div>
+        <div id="flista"></div>
+      </details>
+    </div>
 
     <div class="card" style="margin-top:14px">
       <h2>Como ler</h2>
@@ -252,7 +283,9 @@ function verificar(){
   estado.lat = c.lat; estado.lon = c.lon; estado.centro = [c.lat, c.lon];
   const res = avaliar(c.lat, c.lon, raio, alt, perfilId);
 
-  const eac = avaliarEAC(c.lat, c.lon, raio, alt);
+  const eacTodas = avaliarEAC(c.lat, c.lon, raio, alt);
+  const eac = eacTodas.filter(e => areaLigada(e.a));
+  const eacDesligadas = eacTodas.filter(e => !areaLigada(e.a));
   const eP = eac.filter(e => e.status === 'proibida'), eR = eac.filter(e => e.status === 'dentro');
   const eI = eac.filter(e => e.status === 'indef'), eD = eac.filter(e => e.status === 'perigosa');
   const nomeE = e => `<b>${e.a.id}</b> ${e.a.nome}`;
@@ -297,6 +330,7 @@ function verificar(){
     if(res.some(r => r.ad.tipo === 'AD' && !r.incompleto && r.status !== 'fora')) warns.push('Operação no entorno de estrutura perto de aeroporto: "manter-se afastado, no mínimo, 500 metros" (ICA 100-40, Fig. 2, nota 4).');
     if(res.some(r => r.ad.tipo === 'HP' && r.status !== 'fora')) warns.push('Operação no entorno de estrutura perto de heliponto: "manter-se afastado, no mínimo, 200 metros" (ICA 100-40, Fig. 4, nota 4).');
   }
+  if(eacDesligadas.length) warns.push(`<b>Filtro:</b> o voo também toca ${eacDesligadas.map(e => `<b>${e.a.id}</b> ${e.a.nome} (${{P:'proibida',R:'restrita',D:'perigosa'}[e.a.tipo]})`).join(', ')}, mas ${eacDesligadas.length > 1 ? 'essas áreas estão desligadas' : 'essa área está desligada'} no filtro e não ${eacDesligadas.length > 1 ? 'foram consideradas' : 'foi considerada'}. Confirme no NOTAM/SARPAS se ${eacDesligadas.length > 1 ? 'estão' : 'está'} mesmo inativa${eacDesligadas.length > 1 ? 's' : ''}.`);
   if(eD.length) warns.push(`Área perigosa: ${eD.map(nomeE).join(', ')}. Termo de Coordenação dispensado, mas cabe ao piloto decidir se aceita os possíveis riscos (ICA 100-40, Art. 29, III e parágrafo único).`);
   if(eac.some(e => /NOTAM|SUPLEMENTO|SUPLEMENT|coordena/i.test(e.a.rmk))) warns.push('Algumas áreas acima só ficam ativas por NOTAM, Suplemento AIP ou coordenação com o órgão ATS (veja a observação de cada uma). O SARPAS considera a situação do dia.');
   if(c.assumido) warns.push('Hemisfério não informado: considerei Sul e Oeste. Confira a coordenada.');
@@ -317,6 +351,64 @@ function verificar(){
     ${eac.length ? `<h2 style="margin:16px 0 6px">Áreas proibidas, restritas e perigosas (AIP ENR 5.1)</h2><table><thead><tr><th>Área</th><th>Distância</th><th>Limites</th><th>Explicação</th><th></th></tr></thead><tbody>${linhasE}</tbody></table>` : ''}
     <div class="hint" style="margin-top:10px">Orientação prévia. A confirmação oficial é feita no SARPAS ao cadastrar o voo.</div>`;
   desenhar();
+}
+
+// ===== Filtro das áreas (EAC) =====
+// Só entram no filtro as áreas que podem afetar drones (as que começam em nível de voo não afetam).
+const EAC_DRONE = EAC.filter(a => !(a.inf.ref === 'FL' || (a.inf.ref === 'AMSL' && a.inf.ft > 4600 + 400)));
+const formasEAC = {}; let camadaAreas = null;
+const TIPO_NOME = { P: 'Proibida', R: 'Restrita', D: 'Perigosa' };
+const filtro = { tipos: { P: true, R: true, D: true }, off: new Set() }; // off = áreas desligadas uma a uma
+try { // lembra a escolha neste navegador
+  const s = JSON.parse(localStorage.getItem('filtroEAC') || 'null');
+  if(s){ Object.assign(filtro.tipos, s.tipos || {}); filtro.off = new Set(s.off || []); }
+} catch(e) {}
+function salvarFiltro(){ try { localStorage.setItem('filtroEAC', JSON.stringify({ tipos: filtro.tipos, off: [...filtro.off] })); } catch(e) {} }
+function areaLigada(a){ return filtro.tipos[a.tipo] && !filtro.off.has(a.id); }
+const porNotam = a => /mediante NOTAM|NOTAM ou SUPLEMENTO/i.test(a.rmk);
+
+function montarFiltro(){
+  document.querySelectorAll('.ftipos input').forEach(cb => {
+    cb.checked = filtro.tipos[cb.dataset.tipo];
+    cb.addEventListener('change', () => { filtro.tipos[cb.dataset.tipo] = cb.checked; aplicarFiltro(); });
+  });
+  const ordem = { P: 0, R: 1, D: 2 };
+  $('flista').innerHTML = EAC_DRONE.slice().sort((x, y) => ordem[x.tipo] - ordem[y.tipo] || x.id.localeCompare(y.id)).map(a => `
+    <label data-id="${a.id}" data-busca="${(a.id + ' ' + a.nome + ' ' + a.rmk).toLowerCase()}">
+      <input type="checkbox" data-area="${a.id}">
+      <i class="sw ${a.tipo}" style="margin-top:3px;flex:none"></i>
+      <span><b>${a.id}</b> ${a.nome} <span class="hint">· ${TIPO_NOME[a.tipo]} · ${a.inf.txt} até ${a.sup.txt}${porNotam(a) ? ' · <b>ativada mediante NOTAM</b>' : ''}</span></span>
+    </label>`).join('');
+  $('flista').addEventListener('change', ev => {
+    const id = ev.target.dataset.area; if(!id) return;
+    if(ev.target.checked) filtro.off.delete(id); else filtro.off.add(id);
+    aplicarFiltro();
+  });
+  $('fbusca').addEventListener('input', () => {
+    const q = $('fbusca').value.trim().toLowerCase();
+    $('flista').querySelectorAll('label').forEach(l => { l.style.display = !q || l.dataset.busca.includes(q) ? '' : 'none'; });
+  });
+  $('fTodas').addEventListener('click', () => { filtro.off.clear(); filtro.tipos = { P: true, R: true, D: true }; document.querySelectorAll('.ftipos input').forEach(cb => cb.checked = true); aplicarFiltro(); });
+  $('fNenhuma').addEventListener('click', () => { EAC_DRONE.forEach(a => filtro.off.add(a.id)); aplicarFiltro(); });
+  $('fNotam').addEventListener('click', () => { EAC_DRONE.filter(porNotam).forEach(a => filtro.off.add(a.id)); aplicarFiltro(); });
+  aplicarFiltro(true);
+}
+
+// Atualiza caixas, contador, mapa e (se já houver ponto) o resultado
+function aplicarFiltro(inicio){
+  let ligadas = 0;
+  $('flista').querySelectorAll('label').forEach(l => {
+    const a = EAC_DRONE.find(x => x.id === l.dataset.id);
+    const cb = l.querySelector('input'), on = areaLigada(a);
+    cb.checked = !filtro.off.has(a.id); cb.disabled = !filtro.tipos[a.tipo];
+    l.classList.toggle('off', !on); if(on) ligadas++;
+  });
+  $('fcont').textContent = `${ligadas} de ${EAC_DRONE.length} ligadas`;
+  if(camadaAreas) for(const a of EAC_DRONE){
+    const f = formasEAC[a.id]; if(!f) continue;
+    if(areaLigada(a)) camadaAreas.addLayer(f); else camadaAreas.removeLayer(f);
+  }
+  if(!inicio){ salvarFiltro(); if(estado.lat !== null) verificar(); }
 }
 
 // ===== Mapa com imagem de satélite (Leaflet) =====
@@ -407,13 +499,14 @@ function iniciarMapa(){
   const estilo = { P: { color: '#a3221c', fillColor: '#a3221c', fillOpacity: .18, weight: 2 },
                    R: { color: '#6a1b9a', fillColor: '#6a1b9a', fillOpacity: .12, weight: 2 },
                    D: { color: '#b07800', fillColor: '#e6a000', fillOpacity: .12, weight: 2, dashArray: '6 4' } };
-  for(const a of EAC){
-    if(a.inf.ref === 'FL' || (a.inf.ref === 'AMSL' && a.inf.ft > 4600 + 400)) continue;
+  for(const a of EAC_DRONE){
     const st = Object.assign({ interactive: true }, estilo[a.tipo]);
     const forma = a.circ ? L.circle(a.circ.c, Object.assign({ radius: a.circ.r }, st)) : L.polygon(a.poly, st);
     forma.bindTooltip(`<b>${a.id}</b> ${a.nome}<br>${{P:'Proibida',R:'Restrita',D:'Perigosa'}[a.tipo]} · ${a.inf.txt} até ${a.sup.txt}`, { sticky: true });
-    forma.addTo(areas);
+    formasEAC[a.id] = forma;
+    if(areaLigada(a)) forma.addTo(areas);
   }
+  camadaAreas = areas;
   L.control.layers({ 'Satélite': sat, 'Mapa de ruas': ruas }, { 'Nomes de cidades': nomes, 'Áreas P/R/D (AIP)': areas }, { position: 'topright' }).addTo(mapa);
   L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(mapa);
 
@@ -531,6 +624,7 @@ $('map').addEventListener('click', ev => {
 
 // Limpar dados: volta todos os campos ao início, apaga o resultado e o ponto do mapa
 $('eacFonte').textContent = 'fonte: ' + EAC_FONTE;
+montarFiltro();
 $('limpar').addEventListener('click', () => {
   $('coord').value = '';
   $('alt').value = 200; $('altm').textContent = '≈ 61 m acima do solo';

@@ -1,5 +1,10 @@
 # Histórico de versões
 
+## v6 – 19/11/2026
+- **Filtro das áreas (EAC)**: liga/desliga por tipo (Proibidas, Restritas, Perigosas) e área por área, com busca e botões "Ligar todas", "Desligar todas" e "Desligar as mediante NOTAM".
+- Área desligada some do mapa e não entra na verificação; se o voo tocar uma área desligada, a página avisa ("Filtro: ... não foi considerada").
+- A escolha fica guardada neste navegador.
+
 ## v5 – 19/11/2026
 - **Áreas proibidas (P), restritas (R) e perigosas (D)** – ICA 100-40, Art. 29: 63 áreas que tocam o RS, extraídas da AIP Brasil, ENR 5.1 (emenda AIRAC A 25/2026, efetiva 24 DEC 2026), conferidas com a carta ENRC L1 (29 OCT 2026).
   - P → "OPERAÇÃO PROIBIDA" (Art. 29, I); R → Termo de Coordenação obrigatório (Art. 29, II); D → aviso, TCo dispensado (Art. 29, III).
