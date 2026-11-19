@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verificador FRZ – Drones RS</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f3f1ec; --panel:#ffffff; --ink:#1d2430; --muted:#5d6675; --line:#d9d5cc;
+    --navy:#14304f; --accent:#1f5f99;
+    --ok:#1e7a46; --okbg:#e5f3ea; --bad:#a3221c; --badbg:#fbe7e5; --warn:#8a5a00; --warnbg:#fdf2d9;
+    --s0:#b3261e; --s1:#e5483f; --s2:#f08c2a; --s3:#f2d03b; --s4:#8ccbe8;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"IBM Plex Sans",system-ui,sans-serif;font-size:15px;line-height:1.45}
+  header{background:var(--navy);color:#fff;padding:14px 22px;display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+  header h1{margin:0;font-size:19px;font-weight:600;letter-spacing:.2px}
+  header .sub{opacity:.75;font-size:13px}
+  header .ver{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:12px;opacity:.7}
+  main{max-width:1180px;margin:0 auto;padding:18px;display:grid;grid-template-columns:360px 1fr;gap:18px}
+  @media (max-width:900px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:0 0 12px;font-weight:600}
+  label{display:block;font-weight:500;margin:12px 0 4px;font-size:14px}
+  .hint{font-size:12px;color:var(--muted);margin-top:3px}
+  input,select{width:100%;padding:9px 10px;border:1px solid #bfb9ad;border-radius:6px;font:inherit;background:#fff;color:var(--ink)}
+  input:focus,select:focus{outline:2px solid var(--accent);outline-offset:0;border-color:var(--accent)}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  button{font:inherit;cursor:pointer}
+  .btn{margin-top:16px;width:100%;padding:11px;border:0;border-radius:6px;background:var(--accent);color:#fff;font-weight:600;font-size:15px}
+  .btn:hover{background:#174d7e}
+  .err{color:var(--bad);font-size:13px;margin-top:6px;min-height:1em}
+  .verdict{border-radius:8px;padding:16px 18px;margin-bottom:14px;border:1px solid}
+  .verdict .big{font-size:20px;font-weight:700;margin-bottom:4px}
+  .verdict.dentro{background:var(--badbg);border-color:#e5b3ae;color:var(--bad)}
+  .verdict.fora{background:var(--okbg);border-color:#b5d9c2;color:var(--ok)}
+  .verdict.indef{background:var(--warnbg);border-color:#ecd391;color:var(--warn)}
+  .verdict .txt{color:var(--ink);font-size:14px}
+  .warns{margin:0 0 14px;padding:0;list-style:none}
+  .warns li{background:var(--warnbg);border-left:3px solid #d9a21b;padding:8px 12px;margin-bottom:6px;font-size:13.5px;border-radius:0 6px 6px 0}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  td.num{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
+  .tag{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600}
+  .tag.dentro{background:var(--badbg);color:var(--bad)} .tag.fora{background:var(--okbg);color:var(--ok)} .tag.indef{background:var(--warnbg);color:var(--warn)}
+  .mapwrap{position:relative}
+  canvas{width:100%;height:auto;display:block;border-radius:6px;border:1px solid var(--line);background:#efece5;cursor:crosshair}
+  .maptools{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;font-size:13px}
+  .maptools select{width:auto;padding:5px 8px}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:12px;color:var(--muted)}
+  .legend span{display:inline-flex;align-items:center;gap:5px}
+  .legend i{width:14px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
+  .foot{font-size:12px;color:var(--muted);margin-top:14px;line-height:1.5}
+  .foot a{color:var(--accent)}
+  .empty{color:var(--muted);font-size:14px;padding:18px 0}
+  details{margin-top:12px;font-size:13.5px}
+  summary{cursor:pointer;font-weight:600;color:var(--navy)}
+  .mono{font-family:"IBM Plex Mono",monospace}
+  a.gm{font-size:13px;color:var(--accent)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Verificador FRZ – Aeródromos do RS</h1>
+  <span class="sub">Consulta rápida: o voo do drone entra em Zona de Restrição de Voo? Precisa de Termo de Coordenação?</span>
+  <span class="ver">v2 · 19/11/2026</span>
+</header>
+
+<main>
+  <section>
+    <form class="card" id="f" autocomplete="off">
+      <h2>Dados do voo</h2>
+      <label for="coord">Coordenada do voo</label>
+      <input id="coord" placeholder="-29.7400, -53.6500  ou  29°44'24&quot;S 053°39'00&quot;W">
+      <div class="hint">Aceita decimal ou graus/minutos/segundos. Também pode clicar no mapa.</div>
+      <div class="err" id="errCoord"></div>
+
+      <div class="row">
+        <div>
+          <label for="alt">Altura máxima (ft)</label>
+          <input id="alt" type="number" min="0" step="10" value="200">
+          <div class="hint" id="altm">≈ 61 m acima do solo</div>
+        </div>
+        <div>
+          <label for="raio">Raio da área (m)</label>
+          <input id="raio" type="number" min="0" step="50" value="0">
+          <div class="hint">0 = só o ponto</div>
+        </div>
+      </div>
+
+      <label for="perfil">Tipo de operação</label>
+      <select id="perfil">
+        <option value="recreativa">Recreativa</option>
+        <option value="padrao">Padrão</option>
+        <option value="aerolev">Aerolevantamento</option>
+        <option value="aeroagricola">Aeroagrícola</option>
+        <option value="atipica">Atípica</option>
+        <option value="especial">Aérea Especial</option>
+        <option value="estrutura">Entorno de estrutura</option>
+      </select>
+
+      <button class="btn" type="submit">Verificar</button>
+    </form>
+
+    <div class="card" style="margin-top:14px">
+      <h2>Como ler</h2>
+      <div style="font-size:13.5px">
+        <p style="margin:0 0 8px"><b>FRZ</b> = Zona de Restrição de Voo em volta de aeródromos. Ela é formada por <b>anéis</b>: quanto mais perto do aeródromo, mais baixa começa a restrição.</p>
+        <p style="margin:0 0 8px"><b>ZEA</b> = entorno do aeródromo (medida a partir do eixo da pista).<br><b>ZAD</b> = rampa de pouso e decolagem (medida a partir da cabeceira, abertura de 20°).</p>
+        <p style="margin:0">Se a <b>altura do voo alcança o piso</b> do anel onde ele está, o voo <b>entra em FRZ</b> e o Termo de Coordenação é obrigatório (ICA 100-40, Art. 28).</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="card">
+      <h2>Resultado</h2>
+      <div id="out"><div class="empty">Informe a coordenada e clique em <b>Verificar</b>, ou clique no mapa.</div></div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="maptools">
+        <h2 style="margin:0">Mapa das FRZ</h2>
+        <span style="margin-left:auto">Ir para:</span>
+        <select id="goto"></select>
+        <span>Escala:</span>
+        <select id="escala">
+          <option value="3000">± 3 km</option>
+          <option value="6000" selected>± 6 km</option>
+          <option value="10000">± 10 km</option>
+          <option value="20000">± 20 km</option>
+          <option value="30000">± 30 km</option>
+          <option value="50000">± 50 km</option>
+        </select>
+      </div>
+      <div class="mapwrap"><canvas id="map" width="720" height="520"></canvas></div>
+      <div class="legend">
+        <span><i style="background:var(--s0)"></i>FRZ desde o solo</span>
+        <span><i style="background:var(--s1)"></i>a partir de 100 ft</span>
+        <span><i style="background:var(--s2)"></i>a partir de 200 ft</span>
+        <span><i style="background:var(--s3)"></i>a partir de 300 ft</span>
+        <span><i style="background:var(--s4)"></i>a partir de 400 ft (limite externo não definido)</span>
+      </div>
+      <div class="hint" style="margin-top:6px">Os anéis mudam conforme o tipo de operação escolhido. Sem imagem de satélite: use o link "ver no Google Maps" do resultado para conferir o local.</div>
+    </div>
+
+    <div class="foot">
+      <b>Orientação prévia – a confirmação oficial é feita no SARPAS.</b><br>
+      Cobre apenas FRZ de <b>aeródromos</b> (ICA 100-40, Art. 14). <b>Não</b> cobre: FRZ de áreas de segurança e locais estratégicos (Art. 13 e 16), EAC – TRA, TSA, áreas restritas, proibidas e perigosas (Art. 29), Rotas Especiais de Helicóptero (Art. 30), helipontos e NOTAM vigentes.<br>
+      Geometria das zonas conforme ICA 100-40/2023 (itens 2.1.69–2.1.71), usada como referência interpretativa; a regra "altura ≥ piso do anel" ainda está em validação. Dados dos aeródromos: AISWEB/DECEA, consultados em 19/11/2026.
+    </div>
+  </section>
+</main>
+
+<script src="frz.js"></script>
+<script>
+const $ = id => document.getElementById(id);
+const COR = ['#b3261e','#e5483f','#f08c2a','#f2d03b','#8ccbe8'];
+const COR_RGB = COR.map(h => [parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]);
+let estado = { lat: null, lon: null, centro: null };
+
+function fmtN(n){ return Math.round(n).toLocaleString('pt-BR'); }
+function ftToM(ft){ return ft*0.3048; }
+
+function parseCoord(txt){
+  const s = txt.trim().toUpperCase();
+  if(!s) return null;
+  const dec = s.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d+(?:[.,]\d+)?)\s*$/);
+  if(dec){
+    const a = parseFloat(dec[1].replace(',','.')), b = parseFloat(dec[2].replace(',','.'));
+    return { lat: a, lon: b, assumido: false };
+  }
+  const toks = s.replace(/[°º'’′"”″:]/g,' ').match(/[NSEWOL]|\d+(?:[.,]\d+)?/g);
+  if(!toks) return null;
+  const prefixo = /[A-Z]/.test(toks[0]);
+  const grupos = []; let cur = { nums: [], h: null };
+  for(const t of toks){
+    if(/[A-Z]/.test(t)){
+      if(prefixo){ if(cur.nums.length || cur.h) grupos.push(cur); cur = { nums: [], h: t }; }
+      else { cur.h = t; grupos.push(cur); cur = { nums: [], h: null }; }
+    } else cur.nums.push(parseFloat(t.replace(',','.')));
+  }
+  if(cur.nums.length) grupos.push(cur);
+  let assumido = false;
+  if(grupos.length === 1 && grupos[0].nums.length === 6 && !grupos[0].h){
+    const n = grupos[0].nums; grupos.splice(0,1,{nums:n.slice(0,3),h:'S'},{nums:n.slice(3),h:'W'}); assumido = true;
+  }
+  if(grupos.length !== 2) return null;
+  const val = g => { const [d=0,m=0,sec=0] = g.nums; let v = d + m/60 + sec/3600; if(['S','W','O'].includes(g.h)) v = -v; return v; };
+  let lat, lon;
+  const g0 = grupos[0], g1 = grupos[1];
+  if(['E','W','O','L'].includes(g0.h)) { lon = val(g0); lat = val(g1); } else { lat = val(g0); lon = val(g1); }
+  if(!g0.h && !g1.h){ lat = -Math.abs(lat); lon = -Math.abs(lon); assumido = true; }
+  return { lat, lon, assumido };
+}
+
+function dmsTxt(v, pos, neg){
+  const h = v < 0 ? neg : pos; v = Math.abs(v);
+  const d = Math.floor(v), mF = (v-d)*60, m = Math.floor(mF), s = Math.round((mF-m)*60);
+  return `${String(d).padStart(2,'0')}°${String(m).padStart(2,'0')}'${String(s).padStart(2,'0')}"${h}`;
+}
+
+function explicar(r, alt){
+  const p = r.pior;
+  const onde = p.zona === 'ZAD'
+    ? `na <b>rampa da cabeceira ${p.cab}</b> (ZAD), a ${fmtN(p.dist)} m da cabeceira`
+    : `no <b>entorno do aeródromo</b> (ZEA), a ${fmtN(p.dist)} m do eixo da pista ${p.pista}`;
+  const piso = p.piso === 0 ? 'desde o solo' : `a partir de ${p.piso} ft`;
+  let conc;
+  if(r.status === 'dentro') conc = `O voo vai até ${alt} ft → <b>entra na FRZ</b>.`;
+  else if(r.status === 'fora') conc = `O voo vai até ${alt} ft, abaixo do piso → <b>não entra</b>.`;
+  else conc = `Último anel (setor ${p.setor}): a norma não define até onde ele vai → <b>confirmar no SARPAS</b>.`;
+  return `Parte mais crítica da área ${onde} – setor <b>${p.setor}</b>, FRZ ${piso}. ${conc}`;
+}
+
+function verificar(){
+  $('errCoord').textContent = '';
+  const c = parseCoord($('coord').value);
+  if(!c || !isFinite(c.lat) || !isFinite(c.lon)){ $('errCoord').textContent = 'Coordenada não reconhecida. Ex.: -29.74, -53.65'; return; }
+  if(c.lat < -34.5 || c.lat > -26.5 || c.lon < -58.5 || c.lon > -48.5){ $('errCoord').textContent = 'A coordenada está fora do Rio Grande do Sul. Confira os sinais (Sul e Oeste são negativos).'; return; }
+  const alt = Math.max(0, parseFloat($('alt').value) || 0);
+  const raio = Math.max(0, parseFloat($('raio').value) || 0);
+  const perfilId = $('perfil').value;
+  estado.lat = c.lat; estado.lon = c.lon; estado.centro = [c.lat, c.lon];
+  const res = avaliar(c.lat, c.lon, raio, alt, perfilId);
+
+  const dentro = res.filter(r => r.status === 'dentro');
+  const indef = res.filter(r => r.status === 'indef');
+  let cls, big, txt;
+  if(dentro.length){
+    cls='dentro'; big='ENTRA EM FRZ – Termo de Coordenação obrigatório';
+    txt=`FRZ de: ${dentro.map(r=>`<b>${r.ad.id}</b> (${r.ad.cidade})`).join(', ')}. Base legal: ICA 100-40, Art. 28 ("É obrigatória a apresentação do Termo de Coordenação quando a Operação possuir interseção com FRZ"). Dispensado apenas se o voo for em Área Adequada (Art. 28, parágrafo único).`;
+  } else if(indef.length){
+    cls='indef'; big='INDEFINIDO – confirmar no SARPAS';
+    txt=`Não foi possível concluir para: ${indef.map(r=>`<b>${r.ad.id}</b>`).join(', ')}. ${indef.some(r=>r.incompleto)?'Faltam dados das cabeceiras desse aeródromo. ':''}${indef.some(r=>!r.incompleto)?'O voo está no último anel da FRZ, cujo limite externo não está definido na norma. ':''}`;
+  } else {
+    cls='fora'; big='NÃO ENTRA EM FRZ de aeródromo';
+    txt= res.length ? 'O voo fica fora das FRZ dos aeródromos cadastrados próximos. Pela regra do Art. 14, não há necessidade de Termo de Coordenação por causa de aeródromo.' : 'Nenhum aeródromo cadastrado num raio de 20 km.';
+    txt += ' <b>Atenção:</b> isso não cobre FRZ de áreas de segurança, áreas restritas/proibidas nem helipontos – ver aviso no rodapé.';
+  }
+
+  const warns = [];
+  if(alt > 400) warns.push('Acima de 400 ft (120 m): a operação só é feita com segregação do espaço aéreo, divulgada por produto AIS (ICA 100-40, Art. 25, II).');
+  if(perfilId === 'recreativa'){
+    if(alt > 200) warns.push('Operação recreativa: altura máxima de 200 ft (60 m) acima do solo (ICA 100-40, Art. 32, I).');
+    if(raio > 300) warns.push('Operação recreativa: distância horizontal máxima de 300 m (ICA 100-40, Art. 32, II).');
+  }
+  if(c.assumido) warns.push('Hemisfério não informado: considerei Sul e Oeste. Confira a coordenada.');
+  res.forEach(r => { if(r.ad.obs && r.dARP < 12000) warns.push(`${r.ad.id}: ${r.ad.obs}`); });
+
+  const linhas = res.map(r => {
+    if(r.incompleto) return `<tr><td><b>${r.ad.id}</b><br><span class="hint">${r.ad.cidade}</span></td><td class="num">${fmtN(r.dARP)} m</td><td colspan="2">Dados incompletos (sem cabeceiras)</td><td><span class="tag indef">${r.status==='indef'?'Indefinido':'Longe'}</span></td></tr>`;
+    const tag = {dentro:'Entra',fora:'Não entra',indef:'Confirmar'}[r.status];
+    return `<tr><td><b>${r.ad.id}</b><br><span class="hint">${r.ad.cidade}</span></td><td class="num">${fmtN(r.dARP)} m</td><td>${r.pior.zona} · setor ${r.pior.setor}<br><span class="hint">FRZ ${r.pior.piso===0?'desde o solo':'a partir de '+r.pior.piso+' ft'}</span></td><td style="font-size:13px">${explicar(r, alt)}</td><td><span class="tag ${r.status}">${tag}</span></td></tr>`;
+  }).join('');
+
+  const gm = `https://www.google.com/maps?q=${c.lat.toFixed(6)},${c.lon.toFixed(6)}`;
+  $('out').innerHTML = `
+    <div class="verdict ${cls}"><div class="big">${big}</div><div class="txt">${txt}</div></div>
+    ${warns.length ? '<ul class="warns">'+warns.map(w=>'<li>'+w+'</li>').join('')+'</ul>' : ''}
+    <div style="font-size:13px;margin-bottom:8px">Ponto: <span class="mono">${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}</span> · <span class="mono">${dmsTxt(c.lat,'N','S')} ${dmsTxt(c.lon,'E','W')}</span> · ${alt} ft (${fmtN(ftToM(alt))} m) · raio ${fmtN(raio)} m · ${PERFIS[perfilId].nome} · <a class="gm" href="${gm}" target="_blank" rel="noopener">ver no Google Maps</a></div>
+    ${res.length ? `<table><thead><tr><th>Aeródromo</th><th>Dist. ARP</th><th>Zona</th><th>Explicação</th><th></th></tr></thead><tbody>${linhas}</tbody></table>` : ''}
+    <div class="hint" style="margin-top:10px">Orientação prévia. A confirmação oficial é feita no SARPAS ao cadastrar o voo.</div>`;
+  desenhar();
+}
+
+// ===== Mapa =====
+function desenhar(){
+  const cv = $('map'), ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const meia = parseFloat($('escala').value);
+  const mpp = (2*meia)/W; // metros por pixel
+  const [lat0, lon0] = estado.centro || AERODROMOS[0].arp;
+  const perfil = PERFIS[$('perfil').value];
+  const img = ctx.createImageData(W, H);
+  // aeródromos relevantes para a janela
+  const ads = AERODROMOS.filter(ad => !ad.incompleto).map(ad => {
+    const [ox, oy] = toXY(lat0, lon0, ad.lat0, ad.lon0); return { ad, ox, oy };
+  }).filter(o => Math.hypot(o.ox, o.oy) < meia*1.5 + 12000);
+  const lim = 9000; // desenha o último anel até 9 km (limite externo não definido)
+  for(let j=0;j<H;j++){
+    for(let i=0;i<W;i++){
+      const x = (i - W/2)*mpp, y = (H/2 - j)*mpp;
+      let piso = 999;
+      for(const o of ads){
+        const lx = x - o.ox, ly = y - o.oy;
+        if(Math.hypot(lx,ly) > lim) continue;
+        const c = classificaXY(o.ad, lx, ly, perfil.colAD);
+        if(c.piso < piso) piso = c.piso;
+      }
+      const k = (j*W+i)*4;
+      if(piso === 999){ img.data[k]=239; img.data[k+1]=236; img.data[k+2]=229; img.data[k+3]=255; }
+      else { const [r,g,b] = COR_RGB[piso/100]; const a = .62;
+        img.data[k]=Math.round(r*a+239*(1-a)); img.data[k+1]=Math.round(g*a+236*(1-a)); img.data[k+2]=Math.round(b*a+229*(1-a)); img.data[k+3]=255; }
+    }
+  }
+  ctx.putImageData(img,0,0);
+  const toPx = (lat, lon) => { const [x,y] = toXY(lat0, lon0, lat, lon); return [W/2 + x/mpp, H/2 - y/mpp]; };
+  // pistas e rótulos
+  ctx.lineCap='round';
+  for(const ad of AERODROMOS){
+    for(const p of ad.pistas){
+      const a = toPx(p.cab[0][1], p.cab[0][2]), b = toPx(p.cab[1][1], p.cab[1][2]);
+      ctx.strokeStyle='#1d2430'; ctx.lineWidth=Math.max(3, 45/mpp); ctx.beginPath(); ctx.moveTo(...a); ctx.lineTo(...b); ctx.stroke();
+      ctx.fillStyle='#1d2430'; ctx.font='600 11px IBM Plex Mono, monospace';
+      for(const [q,c] of [[a,p.cab[0]],[b,p.cab[1]]]){ const dx=q[0]-(a[0]+b[0])/2, dy=q[1]-(a[1]+b[1])/2, n=Math.hypot(dx,dy)||1; ctx.fillText(c[0], q[0]+dx/n*12-7, q[1]+dy/n*12+4); }
+    }
+    const [ax, ay] = toPx(ad.arp[0], ad.arp[1]);
+    if(ax>-50 && ax<W+50 && ay>-50 && ay<H+50){
+      ctx.font='600 13px IBM Plex Sans, sans-serif'; ctx.fillStyle='#14304f';
+      ctx.fillText(ad.id + (ad.incompleto?' (sem dados de pista)':''), ax+10, ay-14);
+      if(ad.incompleto){ ctx.fillStyle='#14304f'; ctx.beginPath(); ctx.arc(ax,ay,4,0,7); ctx.fill(); }
+    }
+  }
+  // operação
+  if(estado.lat !== null){
+    const [px, py] = toPx(estado.lat, estado.lon);
+    const raio = Math.max(0, parseFloat($('raio').value)||0);
+    if(raio>0){ ctx.strokeStyle='#14304f'; ctx.lineWidth=2; ctx.setLineDash([6,4]); ctx.beginPath(); ctx.arc(px,py,raio/mpp,0,7); ctx.stroke(); ctx.setLineDash([]); }
+    ctx.fillStyle='#fff'; ctx.strokeStyle='#14304f'; ctx.lineWidth=3; ctx.beginPath(); ctx.arc(px,py,7,0,7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#14304f'; ctx.beginPath(); ctx.arc(px,py,2.5,0,7); ctx.fill();
+  }
+  // escala
+  const barM = meia <= 3000 ? 1000 : meia <= 10000 ? 2000 : meia <= 20000 ? 5000 : 10000; const barPx = barM/mpp;
+  ctx.fillStyle='rgba(255,255,255,.85)'; ctx.fillRect(10,H-34,barPx+70,24);
+  ctx.strokeStyle='#1d2430'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(18,H-18); ctx.lineTo(18+barPx,H-18); ctx.moveTo(18,H-23); ctx.lineTo(18,H-13); ctx.moveTo(18+barPx,H-23); ctx.lineTo(18+barPx,H-13); ctx.stroke();
+  ctx.fillStyle='#1d2430'; ctx.font='12px IBM Plex Mono, monospace'; ctx.fillText((barM/1000)+' km', 24+barPx, H-14);
+  // norte
+  ctx.font='700 13px IBM Plex Sans, sans-serif'; ctx.fillText('N ↑', W-38, 22);
+}
+
+$('map').addEventListener('click', ev => {
+  const cv = $('map'), r = cv.getBoundingClientRect();
+  const i = (ev.clientX - r.left) * cv.width / r.width, j = (ev.clientY - r.top) * cv.height / r.height;
+  const meia = parseFloat($('escala').value), mpp = (2*meia)/cv.width;
+  const [lat0, lon0] = estado.centro || AERODROMOS[0].arp;
+  const [lat, lon] = fromXY(lat0, lon0, (i - cv.width/2)*mpp, (cv.height/2 - j)*mpp);
+  $('coord').value = lat.toFixed(5) + ', ' + lon.toFixed(5);
+  const keep = estado.centro; verificar(); estado.centro = keep || estado.centro; desenhar();
+});
+
+$('f').addEventListener('submit', ev => { ev.preventDefault(); verificar(); });
+$('escala').addEventListener('change', desenhar);
+$('perfil').addEventListener('change', () => { if(estado.lat!==null) verificar(); else desenhar(); });
+$('alt').addEventListener('input', () => { const v = parseFloat($('alt').value)||0; $('altm').textContent = '≈ ' + fmtN(ftToM(v)) + ' m acima do solo'; });
+const g = $('goto');
+g.innerHTML = AERODROMOS.map((ad,i)=>`<option value="${i}">${ad.id} – ${ad.cidade}</option>`).join('');
+g.addEventListener('change', () => { const ad = AERODROMOS[+g.value]; estado.centro = ad.arp.slice(); desenhar(); });
+desenhar();
+</script>
+</body>
+</html>
