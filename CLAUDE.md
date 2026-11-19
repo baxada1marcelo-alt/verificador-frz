@@ -8,7 +8,7 @@ Contexto para o Claude Code trabalhar neste projeto.
 - O SARPAS (DECEA) continua sendo a palavra final. Esta ferramenta é **orientação prévia**.
 
 ## Arquivos
-- `index.html` – a página (abre direto no navegador). Carrega `frz.js`.
+- `index.html` – a página (abre direto no navegador). Carrega `frz.js` e o Leaflet (mapa de satélite, via cdnjs; sem internet usa o mapa desenhado simples).
 - `frz.js` – toda a lógica: dados dos aeródromos, tabelas da ICA 100-40 e cálculo das zonas. Funciona no navegador e no Node.
 - `testes/teste-frz.js` – testes da lógica: `node testes/teste-frz.js`.
 - `docs/diretrizes-de-resposta.md` – regras de resposta e tabelas da norma.
@@ -37,4 +37,4 @@ Contexto para o Claude Code trabalhar neste projeto.
 3. Cabeceiras do SJRG (Rio Grande).
 4. Conferir coordenadas das cabeceiras de SBCO (Canoas).
 5. Incluir helipontos, FRZ de áreas de segurança (Arts. 13/16) e EAC (Art. 29) quando houver dados.
-6. Se publicado no GitHub Pages, dá para colocar mapa com imagem de satélite (no Claude.ai isso é bloqueado).
+6. ~~Mapa com imagem de satélite~~ – feito na v3 (Leaflet + Esri), publicado em https://baxada1marcelo-alt.github.io/verificador-frz/

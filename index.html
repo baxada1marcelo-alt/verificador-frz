@@ -6,6 +6,8 @@
 <title>Verificador FRZ – Drones RS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
   :root{
     --bg:#f3f1ec; --panel:#ffffff; --ink:#1d2430; --muted:#5d6675; --line:#d9d5cc;
@@ -50,6 +52,13 @@
   canvas{width:100%;height:auto;display:block;border-radius:6px;border:1px solid var(--line);background:#efece5;cursor:crosshair}
   .maptools{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;font-size:13px}
   .maptools select{width:auto;padding:5px 8px}
+  .maptools input[type=range]{width:110px;padding:0}
+  #lmap{height:520px;border-radius:6px;border:1px solid var(--line);background:#2a2f36;cursor:crosshair}
+  @media (max-width:600px){#lmap{height:400px}}
+  .leaflet-container{font-family:"IBM Plex Sans",system-ui,sans-serif}
+  .adlbl{background:#14304f;color:#fff;border:0;font-weight:600;font-size:12px;padding:1px 6px;box-shadow:none}
+  .adlbl::before{display:none}
+  #calc{color:var(--muted);font-size:12px}
   .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:12px;color:var(--muted)}
   .legend span{display:inline-flex;align-items:center;gap:5px}
   .legend i{width:14px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
@@ -66,7 +75,7 @@
 <header>
   <h1>Verificador FRZ – Aeródromos do RS</h1>
   <span class="sub">Consulta rápida: o voo do drone entra em Zona de Restrição de Voo? Precisa de Termo de Coordenação?</span>
-  <span class="ver">v2 · 19/11/2026</span>
+  <span class="ver">v3 · 19/11/2026</span>
 </header>
 
 <main>
@@ -126,7 +135,9 @@
         <h2 style="margin:0">Mapa das FRZ</h2>
         <span style="margin-left:auto">Ir para:</span>
         <select id="goto"></select>
-        <span>Escala:</span>
+        <span id="opWrap" style="display:inline-flex;align-items:center;gap:6px">Cor das FRZ: <input id="opac" type="range" min="10" max="90" value="45" title="Transparência das FRZ"></span>
+        <span id="calc"></span>
+        <span id="escalaWrap" style="display:none">Escala:
         <select id="escala">
           <option value="3000">± 3 km</option>
           <option value="6000" selected>± 6 km</option>
@@ -134,9 +145,9 @@
           <option value="20000">± 20 km</option>
           <option value="30000">± 30 km</option>
           <option value="50000">± 50 km</option>
-        </select>
+        </select></span>
       </div>
-      <div class="mapwrap"><canvas id="map" width="720" height="520"></canvas></div>
+      <div class="mapwrap"><div id="lmap"></div><canvas id="map" width="720" height="520" style="display:none"></canvas></div>
       <div class="legend">
         <span><i style="background:var(--s0)"></i>FRZ desde o solo</span>
         <span><i style="background:var(--s1)"></i>a partir de 100 ft</span>
@@ -144,7 +155,7 @@
         <span><i style="background:var(--s3)"></i>a partir de 300 ft</span>
         <span><i style="background:var(--s4)"></i>a partir de 400 ft (limite externo não definido)</span>
       </div>
-      <div class="hint" style="margin-top:6px">Os anéis mudam conforme o tipo de operação escolhido. Sem imagem de satélite: use o link "ver no Google Maps" do resultado para conferir o local.</div>
+      <div class="hint" style="margin-top:6px" id="mapHint">Os anéis mudam conforme o tipo de operação escolhido. Use a barra "Cor das FRZ" para ver melhor a imagem por baixo e o botão de camadas (canto do mapa) para trocar entre satélite e mapa de ruas. O último anel aparece até 9 km do aeródromo só como referência (limite externo não definido). Imagem de satélite: Esri (precisa de internet).</div>
     </div>
 
     <div class="foot">
@@ -267,8 +278,121 @@ function verificar(){
   desenhar();
 }
 
-// ===== Mapa =====
-function desenhar(){
+// ===== Mapa com imagem de satélite (Leaflet) =====
+// Se o Leaflet não carregar (sem internet), usa o mapa desenhado simples (desenharCanvas).
+const LIM_FRZ = 9000;   // desenha o último anel até 9 km (limite externo não definido)
+const PX_M = 20;        // resolução da camada das FRZ: 20 m por pixel
+let mapa = null, camadaOp = null, camadaFRZ = null, colAtual = null;
+const cacheFRZ = {};    // imagens já calculadas, por coluna da tabela
+
+function desenhar(){ if(mapa) desenharOperacao(); else desenharCanvas(); }
+
+// Junta aeródromos próximos (ex.: SBPA e SBCO) numa só imagem, para as cores não se sobreporem
+function gruposAD(){
+  const grupos = [];
+  for(const ad of AERODROMOS.filter(a => !a.incompleto)){
+    const g = grupos.find(g => g.some(o => { const [x,y] = toXY(o.lat0,o.lon0,ad.lat0,ad.lon0); return Math.hypot(x,y) < 2*LIM_FRZ; }));
+    if(g) g.push(ad); else grupos.push([ad]);
+  }
+  return grupos;
+}
+
+// Calcula a imagem colorida das FRZ de um grupo de aeródromos
+function imagemFRZ(grupo, col){
+  const lat0 = grupo[0].lat0, lon0 = grupo[0].lon0;
+  const offs = grupo.map(ad => { const [ox,oy] = toXY(lat0,lon0,ad.lat0,ad.lon0); return { ad, ox, oy }; });
+  const xmin = Math.min(...offs.map(o=>o.ox)) - LIM_FRZ, xmax = Math.max(...offs.map(o=>o.ox)) + LIM_FRZ;
+  const ymin = Math.min(...offs.map(o=>o.oy)) - LIM_FRZ, ymax = Math.max(...offs.map(o=>o.oy)) + LIM_FRZ;
+  const W = Math.ceil((xmax-xmin)/PX_M), H = Math.ceil((ymax-ymin)/PX_M);
+  const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(W, H);
+  for(let j=0;j<H;j++){
+    const y = ymax - (j+.5)*PX_M;
+    for(let i=0;i<W;i++){
+      const x = xmin + (i+.5)*PX_M;
+      let piso = 999;
+      for(const o of offs){
+        const lx = x - o.ox, ly = y - o.oy;
+        if(Math.hypot(lx,ly) > LIM_FRZ) continue;
+        const c = classificaXY(o.ad, lx, ly, col);
+        if(c.piso < piso) piso = c.piso;
+      }
+      if(piso === 999) continue; // fora: transparente
+      const k = (j*W+i)*4, [r,g,b] = COR_RGB[piso/100];
+      img.data[k]=r; img.data[k+1]=g; img.data[k+2]=b; img.data[k+3]=255;
+    }
+  }
+  ctx.putImageData(img,0,0);
+  const sw = fromXY(lat0, lon0, xmin, ymax - H*PX_M), ne = fromXY(lat0, lon0, xmin + W*PX_M, ymax);
+  return L.imageOverlay(cv.toDataURL(), [sw, ne], { opacity: $('opac').value/100, interactive: false });
+}
+
+// Mostra as FRZ da coluna do tipo de operação escolhido (calcula aos poucos para não travar a página)
+function atualizarFRZ(){
+  const col = PERFIS[$('perfil').value].colAD;
+  if(col === colAtual) return;
+  colAtual = col;
+  if(camadaFRZ) mapa.removeLayer(camadaFRZ);
+  if(!cacheFRZ[col]){
+    const grupo = L.layerGroup(); cacheFRZ[col] = grupo;
+    const fila = gruposAD();
+    const total = fila.length;
+    const passo = () => {
+      if(!fila.length){ $('calc').textContent = ''; return; }
+      $('calc').textContent = `Calculando FRZ… ${total - fila.length + 1}/${total}`;
+      setTimeout(() => { const im = imagemFRZ(fila.shift(), col); grupo.addLayer(im); im.bringToBack(); passo(); }, 0);
+    };
+    passo();
+  }
+  camadaFRZ = cacheFRZ[col].addTo(mapa);
+  camadaFRZ.eachLayer(l => { l.setOpacity($('opac').value/100); l.bringToBack(); }); // FRZ por baixo das pistas
+}
+
+function iniciarMapa(){
+  mapa = L.map('lmap', { zoomControl: true }).setView(AERODROMOS[0].arp, 12);
+  const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19, attribution: 'Imagens &copy; Esri, Maxar, Earthstar Geographics' }).addTo(mapa);
+  const nomes = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19, pane: 'shadowPane' }).addTo(mapa);
+  const ruas = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '&copy; colaboradores do OpenStreetMap' });
+  L.control.layers({ 'Satélite': sat, 'Mapa de ruas': ruas }, { 'Nomes de cidades': nomes }, { position: 'topright' }).addTo(mapa);
+  L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(mapa);
+
+  // pistas e nomes dos aeródromos
+  for(const ad of AERODROMOS){
+    for(const p of ad.pistas){
+      const pts = [[p.cab[0][1], p.cab[0][2]], [p.cab[1][1], p.cab[1][2]]];
+      L.polyline(pts, { color: '#fff', weight: 6, opacity: .9, interactive: false }).addTo(mapa);
+      L.polyline(pts, { color: '#1d2430', weight: 3, interactive: false }).addTo(mapa);
+    }
+    L.circleMarker(ad.arp, { radius: 3, color: '#14304f', fillColor: '#fff', fillOpacity: 1, weight: 2, interactive: false })
+      .bindTooltip(ad.id + (ad.incompleto ? ' (sem dados de pista)' : ''), { permanent: true, direction: 'right', className: 'adlbl', offset: [6, 0] })
+      .addTo(mapa);
+  }
+  camadaOp = L.layerGroup().addTo(mapa);
+  atualizarFRZ();
+
+  mapa.on('click', e => {
+    $('coord').value = e.latlng.lat.toFixed(5) + ', ' + e.latlng.lng.toFixed(5);
+    verificar();
+  });
+  $('opac').addEventListener('input', () => { if(camadaFRZ) camadaFRZ.eachLayer(l => l.setOpacity($('opac').value/100)); });
+}
+
+// Marca o ponto do voo e o raio da área no mapa de satélite
+function desenharOperacao(){
+  camadaOp.clearLayers();
+  if(estado.lat === null) return;
+  const p = [estado.lat, estado.lon];
+  const raio = Math.max(0, parseFloat($('raio').value)||0);
+  if(raio > 0) L.circle(p, { radius: raio, color: '#fff', weight: 2, dashArray: '6 4', fill: false, interactive: false }).addTo(camadaOp);
+  L.circleMarker(p, { radius: 7, color: '#14304f', weight: 3, fillColor: '#fff', fillOpacity: 1, interactive: false }).addTo(camadaOp);
+  L.circleMarker(p, { radius: 2.5, color: '#14304f', weight: 0, fillColor: '#14304f', fillOpacity: 1, interactive: false }).addTo(camadaOp);
+}
+
+// ===== Mapa desenhado simples (sem internet) =====
+function desenharCanvas(){
   const cv = $('map'), ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height;
   const meia = parseFloat($('escala').value);
@@ -342,13 +466,24 @@ $('map').addEventListener('click', ev => {
   const keep = estado.centro; verificar(); estado.centro = keep || estado.centro; desenhar();
 });
 
-$('f').addEventListener('submit', ev => { ev.preventDefault(); verificar(); });
+$('f').addEventListener('submit', ev => {
+  ev.preventDefault(); verificar();
+  if(mapa && estado.lat !== null){ const p = L.latLng(estado.lat, estado.lon); if(!mapa.getBounds().contains(p)) mapa.setView(p, Math.max(mapa.getZoom(), 13)); }
+});
 $('escala').addEventListener('change', desenhar);
-$('perfil').addEventListener('change', () => { if(estado.lat!==null) verificar(); else desenhar(); });
+$('perfil').addEventListener('change', () => { if(mapa) atualizarFRZ(); if(estado.lat!==null) verificar(); else desenhar(); });
 $('alt').addEventListener('input', () => { const v = parseFloat($('alt').value)||0; $('altm').textContent = '≈ ' + fmtN(ftToM(v)) + ' m acima do solo'; });
 const g = $('goto');
 g.innerHTML = AERODROMOS.map((ad,i)=>`<option value="${i}">${ad.id} – ${ad.cidade}</option>`).join('');
-g.addEventListener('change', () => { const ad = AERODROMOS[+g.value]; estado.centro = ad.arp.slice(); desenhar(); });
+g.addEventListener('change', () => { const ad = AERODROMOS[+g.value]; if(mapa) mapa.setView(ad.arp, 12); else { estado.centro = ad.arp.slice(); desenhar(); } });
+if(typeof L !== 'undefined'){
+  iniciarMapa();
+} else {
+  // sem internet: mapa desenhado simples
+  $('lmap').style.display = 'none'; $('map').style.display = 'block';
+  $('opWrap').style.display = 'none'; $('escalaWrap').style.display = '';
+  $('mapHint').textContent = 'Sem internet: mostrando o mapa desenhado simples (sem satélite). Use o link "ver no Google Maps" do resultado para conferir o local.';
+}
 desenhar();
 </script>
 </body>
