@@ -5,6 +5,7 @@
 - **Altura em pés ou metros:** ao lado do campo "Altura máxima" há um seletor pés (ft) / metros (m). O cálculo continua em pés, porque as tabelas da ICA 100-40 estão em ft (1 ft = 0,3048 m). Ao trocar a unidade, o número do campo é convertido, e a escolha fica lembrada neste navegador.
 - Os campos de altura e raio aceitam qualquer número (antes o navegador podia recusar, por exemplo, 105 ft ou raio 120 m).
 - Conferido com prints do SARPAS (SBSM, 10 ft, raio 100 m): ponto no setor F da ZAD → SARPAS "Não aceito – ZAD SBSM" e verificador "Entra".
+- Conferido também: ponto no setor G da ZAD da SBSM (−29,70827, −53,74538, 3.915 m da cabeceira 11, piso 100 ft) a 105 ft → SARPAS "Não aceito – ZAD SBSM" e verificador "Entra".
 
 ## v9 – 19/11/2026
 - SBSM: a RWY 02/20 (fechada pelo SUP N0057 até 26/04/2029) continua **fora** do cálculo, por decisão do Sgt Marcelo.
