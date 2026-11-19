@@ -6,6 +6,7 @@
 - Aviso da nota (4) das Figs. 2 e 4 para operação no entorno de estrutura (afastamento mínimo de 500 m do aeroporto / 200 m do heliponto).
 - Mapa: helipontos marcados com "H" e anéis da ZEH; aeródromos/helipontos próximos desenhados juntos.
 - Testes: 6 novos casos de helipontos.
+- Botão **"Limpar dados"**: volta todos os campos ao início (coordenada, altura 200 ft, raio 0, Recreativa) e apaga o resultado e o ponto do mapa.
 
 ## v3 – 19/11/2026
 - Mapa com **imagem de satélite** (Esri) e opção de mapa de ruas (OpenStreetMap), com zoom e arrastar (biblioteca Leaflet).

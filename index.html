@@ -33,6 +33,9 @@
   button{font:inherit;cursor:pointer}
   .btn{margin-top:16px;width:100%;padding:11px;border:0;border-radius:6px;background:var(--accent);color:#fff;font-weight:600;font-size:15px}
   .btn:hover{background:#174d7e}
+  .btns{display:grid;grid-template-columns:2fr 1fr;gap:10px}
+  .btn.sec{background:#fff;color:var(--accent);border:1px solid var(--accent)}
+  .btn.sec:hover{background:#eef3f8}
   .err{color:var(--bad);font-size:13px;margin-top:6px;min-height:1em}
   .verdict{border-radius:8px;padding:16px 18px;margin-bottom:14px;border:1px solid}
   .verdict .big{font-size:20px;font-weight:700;margin-bottom:4px}
@@ -112,7 +115,10 @@
         <option value="estrutura">Entorno de estrutura</option>
       </select>
 
-      <button class="btn" type="submit">Verificar</button>
+      <div class="btns">
+        <button class="btn" type="submit">Verificar</button>
+        <button class="btn sec" type="button" id="limpar">Limpar dados</button>
+      </div>
     </form>
 
     <div class="card" style="margin-top:14px">
@@ -482,6 +488,21 @@ $('map').addEventListener('click', ev => {
   const [lat, lon] = fromXY(lat0, lon0, (i - cv.width/2)*mpp, (cv.height/2 - j)*mpp);
   $('coord').value = lat.toFixed(5) + ', ' + lon.toFixed(5);
   const keep = estado.centro; verificar(); estado.centro = keep || estado.centro; desenhar();
+});
+
+// Limpar dados: volta todos os campos ao início, apaga o resultado e o ponto do mapa
+$('limpar').addEventListener('click', () => {
+  $('coord').value = '';
+  $('alt').value = 200; $('altm').textContent = '≈ 61 m acima do solo';
+  $('raio').value = 0;
+  const mudouPerfil = $('perfil').value !== 'recreativa';
+  $('perfil').value = 'recreativa';
+  $('errCoord').textContent = '';
+  $('out').innerHTML = '<div class="empty">Informe a coordenada e clique em <b>Verificar</b>, ou clique no mapa.</div>';
+  estado.lat = null; estado.lon = null;
+  if(mapa && mudouPerfil) atualizarFRZ();
+  desenhar();
+  $('coord').focus();
 });
 
 $('f').addEventListener('submit', ev => {
