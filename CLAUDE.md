@@ -32,9 +32,10 @@ Contexto para o Claude Code trabalhar neste projeto.
 - Versionar: subir a versão (v2 → v3…) no cabeçalho do `index.html` e no CHANGELOG, com data.
 
 ## Pendências
-1. Validar a regra da altura comparando com pedidos reais no SARPAS.
-2. Limite externo dos setores E/J.
-3. Cabeceiras do SJRG (Rio Grande).
-4. Conferir coordenadas das cabeceiras de SBCO (Canoas).
-5. Incluir helipontos, FRZ de áreas de segurança (Arts. 13/16) e EAC (Art. 29) quando houver dados.
+1. Validar a regra da altura comparando com pedidos reais no SARPAS. As vistas de perfil da ICA 100-40/2026 (Figs. 3 e 5) confirmam a leitura "FRZ começa na altura do anel". Falta só conferir no SARPAS o caso de voo **exatamente** na altura do piso (hoje conta como "entra") – só o Marcelo consegue (precisa de login no SARPAS).
+2. ~~Limite externo dos setores E/J~~ – resolvido na prática (v4): nesse anel a FRZ começa em 400 ft; abaixo disso não entra. O limite externo continua sem definição na norma, mas só importa para voo com 400 ft ou mais.
+3. Cabeceiras do SJRG (Rio Grande) – desconsiderada por decisão do Marcelo (19/11/2026).
+4. Cabeceiras de SBCO (Canoas) – desconsiderada por decisão do Marcelo (19/11/2026).
+5. ~~Helipontos~~ – feito na v4 (35 helipontos do AISWEB). Ainda faltam: FRZ de áreas de segurança/locais estratégicos (Arts. 13 e 16) e EAC (Art. 29). A norma diz que as dimensões são "divulgadas por meio de produto AIS" caso a caso (AIP ENR 5.1, NOTAM, mapa do SARPAS) – não há tabela fixa. Precisa de uma fonte oficial com a lista e as coordenadas dessas áreas no RS.
+7. Lista de helipontos muda com o tempo: reconferir no AISWEB (Aeródromos → Tipo Heliponto, UF RS) de tempos em tempos.
 6. ~~Mapa com imagem de satélite~~ – feito na v3 (Leaflet + Esri), publicado em https://baxada1marcelo-alt.github.io/verificador-frz/

@@ -18,10 +18,11 @@ Página on-line: https://baxada1marcelo-alt.github.io/verificador-frz/
 3. Preencha altura (ft), raio (m) e tipo de operação → **Verificar**.
 
 ## O que cobre
-FRZ de **aeródromos** (ICA 100-40, Art. 14) dos principais aeroportos do RS: SBSM, SBPA, SBCO, SBCX, SBPF, SBPK, SBBG, SBUG, SBNM (SJRG com dados incompletos).
+- FRZ de **aeródromos** (ICA 100-40, Art. 14) dos principais aeroportos do RS: SBSM, SBPA, SBCO, SBCX, SBPF, SBPK, SBBG, SBUG, SBNM (SJRG com dados incompletos).
+- FRZ de **helipontos** (Art. 15): os 35 helipontos do RS cadastrados no AISWEB (19/11/2026).
 
 ## O que NÃO cobre
-FRZ de áreas de segurança e locais estratégicos (Arts. 13 e 16), EAC – TRA, TSA, áreas restritas, proibidas e perigosas (Art. 29), Rotas Especiais de Helicóptero (Art. 30), helipontos e NOTAM vigentes.
+FRZ de áreas de segurança e locais estratégicos (Arts. 13 e 16), EAC – TRA, TSA, áreas restritas, proibidas e perigosas (Art. 29), Rotas Especiais de Helicóptero (Art. 30) e NOTAM vigentes.
 
 ## Base
 - ICA 100-40/2026 – Aeronaves Não Tripuladas e o Acesso ao Espaço Aéreo Brasileiro (Portaria DECEA nº 2.094/DNOR8).

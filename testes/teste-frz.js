@@ -35,3 +35,30 @@ for (const [s, l, alt, zona, setor, status] of casos) {
   ok++;
 }
 console.log(`${ok}/${casos.length} testes OK`);
+
+// ===== Helipontos (ZEH – ICA 100-40, Art. 15, Fig. 4) =====
+function pontoHP(id, norte) {
+  const h = f.HELIPONTOS.find(x => x.id === id);
+  return f.fromXY(h.lat0, h.lon0, 0, norte);
+}
+const casosHP = [
+  // [heliponto, distância (m), altura ft, tipo de operação, setor, status]
+  ['SDWY', 1000,  10, 'recreativa', 'A', 'dentro'],  // VFR → coluna 2 (até 1130 m)
+  ['SDWY', 1500,  90, 'recreativa', 'B', 'fora'],
+  ['SDWY', 1500, 100, 'recreativa', 'B', 'dentro'],
+  ['SJJZ', 1500,  50, 'recreativa', 'A', 'dentro'],  // IFR → coluna 1 (até 1740 m)
+  ['SJJZ', 1500,  50, 'especial',   'B', 'fora'],    // IFR + Aérea Especial → coluna 2
+];
+let okHP = 0;
+for (const [id, d, alt, perfil, setor, status] of casosHP) {
+  const [lat, lon] = pontoHP(id, d);
+  const r = f.avaliar(lat, lon, 0, alt, perfil).find(x => x.ad.id === id);
+  assert.ok(r, `${id} deveria aparecer no resultado`);
+  assert.strictEqual(r.pior.zona, 'ZEH');
+  assert.strictEqual(r.pior.setor, setor, `setor ${id} d=${d} ${perfil}`);
+  assert.strictEqual(r.status, status, `status ${id} d=${d} alt=${alt} ${perfil}`);
+  okHP++;
+}
+// longe de heliponto (setor E) e abaixo de 400 ft: não aparece na lista
+{ const [lat, lon] = pontoHP('SDWY', 5000); assert.ok(!f.avaliar(lat, lon, 0, 200, 'recreativa').some(x => x.ad.id === 'SDWY')); okHP++; }
+console.log(`${okHP}/${casosHP.length + 1} testes de helipontos OK`);

@@ -59,6 +59,7 @@
   .adlbl{background:#14304f;color:#fff;border:0;font-weight:600;font-size:12px;padding:1px 6px;box-shadow:none}
   .adlbl::before{display:none}
   #calc{color:var(--muted);font-size:12px}
+  .hpico{width:16px;height:16px;border-radius:50%;background:#fff;border:2px solid #14304f;color:#14304f;font:700 10px/12px "IBM Plex Sans",sans-serif;text-align:center}
   .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:12px;color:var(--muted)}
   .legend span{display:inline-flex;align-items:center;gap:5px}
   .legend i{width:14px;height:14px;border-radius:3px;display:inline-block;border:1px solid rgba(0,0,0,.15)}
@@ -73,9 +74,9 @@
 </head>
 <body>
 <header>
-  <h1>Verificador FRZ – Aeródromos do RS</h1>
+  <h1>Verificador FRZ – Aeródromos e Helipontos do RS</h1>
   <span class="sub">Consulta rápida: o voo do drone entra em Zona de Restrição de Voo? Precisa de Termo de Coordenação?</span>
-  <span class="ver">v3 · 19/11/2026</span>
+  <span class="ver">v4 · 19/11/2026</span>
 </header>
 
 <main>
@@ -153,15 +154,16 @@
         <span><i style="background:var(--s1)"></i>a partir de 100 ft</span>
         <span><i style="background:var(--s2)"></i>a partir de 200 ft</span>
         <span><i style="background:var(--s3)"></i>a partir de 300 ft</span>
-        <span><i style="background:var(--s4)"></i>a partir de 400 ft (limite externo não definido)</span>
+        <span><i style="background:var(--s4)"></i>a partir de 400 ft (último anel)</span>
+        <span><i style="background:#fff;border:2px solid #14304f;border-radius:50%"></i>H = heliponto</span>
       </div>
-      <div class="hint" style="margin-top:6px" id="mapHint">Os anéis mudam conforme o tipo de operação escolhido. Use a barra "Cor das FRZ" para ver melhor a imagem por baixo e o botão de camadas (canto do mapa) para trocar entre satélite e mapa de ruas. O último anel aparece até 9 km do aeródromo só como referência (limite externo não definido). Imagem de satélite: Esri (precisa de internet).</div>
+      <div class="hint" style="margin-top:6px" id="mapHint">Os anéis mudam conforme o tipo de operação escolhido. Use a barra "Cor das FRZ" para ver melhor a imagem por baixo e o botão de camadas (canto do mapa) para trocar entre satélite e mapa de ruas. O último anel (azul) aparece até 9 km do aeródromo e 4,5 km do heliponto só como referência: nele a FRZ só começa em 400 ft. Passe o mouse no "H" para ver o nome do heliponto. Imagem de satélite: Esri (precisa de internet).</div>
     </div>
 
     <div class="foot">
       <b>Orientação prévia – a confirmação oficial é feita no SARPAS.</b><br>
-      Cobre apenas FRZ de <b>aeródromos</b> (ICA 100-40, Art. 14). <b>Não</b> cobre: FRZ de áreas de segurança e locais estratégicos (Art. 13 e 16), EAC – TRA, TSA, áreas restritas, proibidas e perigosas (Art. 29), Rotas Especiais de Helicóptero (Art. 30), helipontos e NOTAM vigentes.<br>
-      Geometria das zonas conforme ICA 100-40/2023 (itens 2.1.69–2.1.71), usada como referência interpretativa; a regra "altura ≥ piso do anel" ainda está em validação. Dados dos aeródromos: AISWEB/DECEA, consultados em 19/11/2026.
+      Cobre FRZ de <b>aeródromos</b> (ICA 100-40, Art. 14) e de <b>helipontos</b> cadastrados no AISWEB (Art. 15). <b>Não</b> cobre: FRZ de áreas de segurança e locais de interesse estratégico (Arts. 13 e 16 – dimensões divulgadas caso a caso por produto AIS), EAC – TRA, TSA, áreas restritas, proibidas e perigosas (Art. 29), Rotas Especiais de Helicóptero (Art. 30) e NOTAM vigentes.<br>
+      Tabelas e figuras: ICA 100-40/2026, Figs. 2 a 5 (as vistas de perfil mostram a FRZ em degraus: em cada anel ela começa na altura indicada). Geometria detalhada da ZAD/ZEA conforme ICA 100-40/2023 (itens 2.1.69–2.1.71), como referência interpretativa. Dados de aeródromos e helipontos: AISWEB/DECEA, consultados em 19/11/2026.
     </div>
   </section>
 </main>
@@ -218,12 +220,14 @@ function explicar(r, alt){
   const p = r.pior;
   const onde = p.zona === 'ZAD'
     ? `na <b>rampa da cabeceira ${p.cab}</b> (ZAD), a ${fmtN(p.dist)} m da cabeceira`
+    : p.zona === 'ZEH'
+    ? `no <b>entorno do heliponto</b> (ZEH, heliponto ${r.ad.regra}), a ${fmtN(p.dist)} m do heliponto`
     : `no <b>entorno do aeródromo</b> (ZEA), a ${fmtN(p.dist)} m do eixo da pista ${p.pista}`;
   const piso = p.piso === 0 ? 'desde o solo' : `a partir de ${p.piso} ft`;
   let conc;
   if(r.status === 'dentro') conc = `O voo vai até ${alt} ft → <b>entra na FRZ</b>.`;
   else if(r.status === 'fora') conc = `O voo vai até ${alt} ft, abaixo do piso → <b>não entra</b>.`;
-  else conc = `Último anel (setor ${p.setor}): a norma não define até onde ele vai → <b>confirmar no SARPAS</b>.`;
+  else conc = `Último anel (setor ${p.setor}): a FRZ só começa em 400 ft e a norma não define até onde esse anel vai. Com ${alt} ft → <b>confirmar no SARPAS</b>.`;
   return `Parte mais crítica da área ${onde} – setor <b>${p.setor}</b>, FRZ ${piso}. ${conc}`;
 }
 
@@ -246,11 +250,11 @@ function verificar(){
     txt=`FRZ de: ${dentro.map(r=>`<b>${r.ad.id}</b> (${r.ad.cidade})`).join(', ')}. Base legal: ICA 100-40, Art. 28 ("É obrigatória a apresentação do Termo de Coordenação quando a Operação possuir interseção com FRZ"). Dispensado apenas se o voo for em Área Adequada (Art. 28, parágrafo único).`;
   } else if(indef.length){
     cls='indef'; big='INDEFINIDO – confirmar no SARPAS';
-    txt=`Não foi possível concluir para: ${indef.map(r=>`<b>${r.ad.id}</b>`).join(', ')}. ${indef.some(r=>r.incompleto)?'Faltam dados das cabeceiras desse aeródromo. ':''}${indef.some(r=>!r.incompleto)?'O voo está no último anel da FRZ, cujo limite externo não está definido na norma. ':''}`;
+    txt=`Não foi possível concluir para: ${indef.map(r=>`<b>${r.ad.id}</b>`).join(', ')}. ${indef.some(r=>r.incompleto)?'Faltam dados das cabeceiras desse aeródromo. ':''}${indef.some(r=>!r.incompleto)?'O voo chega a 400 ft no último anel da FRZ (setor E/J), onde a FRZ começa em 400 ft e a norma não define o limite externo. Abaixo de 400 ft esse anel não é atingido. ':''}`;
   } else {
-    cls='fora'; big='NÃO ENTRA EM FRZ de aeródromo';
-    txt= res.length ? 'O voo fica fora das FRZ dos aeródromos cadastrados próximos. Pela regra do Art. 14, não há necessidade de Termo de Coordenação por causa de aeródromo.' : 'Nenhum aeródromo cadastrado num raio de 20 km.';
-    txt += ' <b>Atenção:</b> isso não cobre FRZ de áreas de segurança, áreas restritas/proibidas nem helipontos – ver aviso no rodapé.';
+    cls='fora'; big='NÃO ENTRA EM FRZ de aeródromo/heliponto';
+    txt= res.length ? 'O voo fica fora das FRZ dos aeródromos e helipontos cadastrados próximos. Pelos Arts. 14 e 15, não há necessidade de Termo de Coordenação por causa de aeródromo ou heliponto.' : 'Nenhum aeródromo cadastrado num raio de 20 km nem heliponto próximo.';
+    txt += ' <b>Atenção:</b> isso não cobre FRZ de áreas de segurança nem áreas restritas/proibidas/perigosas – ver aviso no rodapé.';
   }
 
   const warns = [];
@@ -259,13 +263,17 @@ function verificar(){
     if(alt > 200) warns.push('Operação recreativa: altura máxima de 200 ft (60 m) acima do solo (ICA 100-40, Art. 32, I).');
     if(raio > 300) warns.push('Operação recreativa: distância horizontal máxima de 300 m (ICA 100-40, Art. 32, II).');
   }
+  if(perfilId === 'estrutura'){
+    if(res.some(r => r.ad.tipo === 'AD' && !r.incompleto && r.status !== 'fora')) warns.push('Operação no entorno de estrutura perto de aeroporto: "manter-se afastado, no mínimo, 500 metros" (ICA 100-40, Fig. 2, nota 4).');
+    if(res.some(r => r.ad.tipo === 'HP' && r.status !== 'fora')) warns.push('Operação no entorno de estrutura perto de heliponto: "manter-se afastado, no mínimo, 200 metros" (ICA 100-40, Fig. 4, nota 4).');
+  }
   if(c.assumido) warns.push('Hemisfério não informado: considerei Sul e Oeste. Confira a coordenada.');
   res.forEach(r => { if(r.ad.obs && r.dARP < 12000) warns.push(`${r.ad.id}: ${r.ad.obs}`); });
 
   const linhas = res.map(r => {
     if(r.incompleto) return `<tr><td><b>${r.ad.id}</b><br><span class="hint">${r.ad.cidade}</span></td><td class="num">${fmtN(r.dARP)} m</td><td colspan="2">Dados incompletos (sem cabeceiras)</td><td><span class="tag indef">${r.status==='indef'?'Indefinido':'Longe'}</span></td></tr>`;
     const tag = {dentro:'Entra',fora:'Não entra',indef:'Confirmar'}[r.status];
-    return `<tr><td><b>${r.ad.id}</b><br><span class="hint">${r.ad.cidade}</span></td><td class="num">${fmtN(r.dARP)} m</td><td>${r.pior.zona} · setor ${r.pior.setor}<br><span class="hint">FRZ ${r.pior.piso===0?'desde o solo':'a partir de '+r.pior.piso+' ft'}</span></td><td style="font-size:13px">${explicar(r, alt)}</td><td><span class="tag ${r.status}">${tag}</span></td></tr>`;
+    return `<tr><td><b>${r.ad.id}</b><br><span class="hint">${r.ad.tipo==='HP'?'Heliponto '+r.ad.regra+' · ':''}${r.ad.cidade}</span></td><td class="num">${fmtN(r.dARP)} m</td><td>${r.pior.zona} · setor ${r.pior.setor}<br><span class="hint">FRZ ${r.pior.piso===0?'desde o solo':'a partir de '+r.pior.piso+' ft'}</span></td><td style="font-size:13px">${explicar(r, alt)}</td><td><span class="tag ${r.status}">${tag}</span></td></tr>`;
   }).join('');
 
   const gm = `https://www.google.com/maps?q=${c.lat.toFixed(6)},${c.lon.toFixed(6)}`;
@@ -273,14 +281,16 @@ function verificar(){
     <div class="verdict ${cls}"><div class="big">${big}</div><div class="txt">${txt}</div></div>
     ${warns.length ? '<ul class="warns">'+warns.map(w=>'<li>'+w+'</li>').join('')+'</ul>' : ''}
     <div style="font-size:13px;margin-bottom:8px">Ponto: <span class="mono">${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}</span> · <span class="mono">${dmsTxt(c.lat,'N','S')} ${dmsTxt(c.lon,'E','W')}</span> · ${alt} ft (${fmtN(ftToM(alt))} m) · raio ${fmtN(raio)} m · ${PERFIS[perfilId].nome} · <a class="gm" href="${gm}" target="_blank" rel="noopener">ver no Google Maps</a></div>
-    ${res.length ? `<table><thead><tr><th>Aeródromo</th><th>Dist. ARP</th><th>Zona</th><th>Explicação</th><th></th></tr></thead><tbody>${linhas}</tbody></table>` : ''}
+    ${res.length ? `<table><thead><tr><th>Local</th><th>Distância</th><th>Zona</th><th>Explicação</th><th></th></tr></thead><tbody>${linhas}</tbody></table>` : ''}
     <div class="hint" style="margin-top:10px">Orientação prévia. A confirmação oficial é feita no SARPAS ao cadastrar o voo.</div>`;
   desenhar();
 }
 
 // ===== Mapa com imagem de satélite (Leaflet) =====
 // Se o Leaflet não carregar (sem internet), usa o mapa desenhado simples (desenharCanvas).
-const LIM_FRZ = 9000;   // desenha o último anel até 9 km (limite externo não definido)
+const LIM_FRZ = 9000;   // aeródromo: desenha o último anel até 9 km (limite externo não definido)
+const LIM_HP = 4500;    // heliponto: desenha o último anel até 4,5 km
+const limDe = s => s.tipo === 'HP' ? LIM_HP : LIM_FRZ;
 const PX_M = 20;        // resolução da camada das FRZ: 20 m por pixel
 let mapa = null, camadaOp = null, camadaFRZ = null, colAtual = null;
 const cacheFRZ = {};    // imagens já calculadas, por coluna da tabela
@@ -290,19 +300,22 @@ function desenhar(){ if(mapa) desenharOperacao(); else desenharCanvas(); }
 // Junta aeródromos próximos (ex.: SBPA e SBCO) numa só imagem, para as cores não se sobreporem
 function gruposAD(){
   const grupos = [];
-  for(const ad of AERODROMOS.filter(a => !a.incompleto)){
-    const g = grupos.find(g => g.some(o => { const [x,y] = toXY(o.lat0,o.lon0,ad.lat0,ad.lon0); return Math.hypot(x,y) < 2*LIM_FRZ; }));
-    if(g) g.push(ad); else grupos.push([ad]);
+  for(const ad of SITIOS.filter(a => !a.incompleto)){
+    const perto = g => g.some(o => { const [x,y] = toXY(o.lat0,o.lon0,ad.lat0,ad.lon0); return Math.hypot(x,y) < limDe(o) + limDe(ad); });
+    const juntos = grupos.filter(perto);
+    const novo = [ad].concat(...juntos);
+    for(const g of juntos) grupos.splice(grupos.indexOf(g), 1);
+    grupos.push(novo);
   }
   return grupos;
 }
 
 // Calcula a imagem colorida das FRZ de um grupo de aeródromos
-function imagemFRZ(grupo, col){
+function imagemFRZ(grupo, perfilId){
   const lat0 = grupo[0].lat0, lon0 = grupo[0].lon0;
-  const offs = grupo.map(ad => { const [ox,oy] = toXY(lat0,lon0,ad.lat0,ad.lon0); return { ad, ox, oy }; });
-  const xmin = Math.min(...offs.map(o=>o.ox)) - LIM_FRZ, xmax = Math.max(...offs.map(o=>o.ox)) + LIM_FRZ;
-  const ymin = Math.min(...offs.map(o=>o.oy)) - LIM_FRZ, ymax = Math.max(...offs.map(o=>o.oy)) + LIM_FRZ;
+  const offs = grupo.map(ad => { const [ox,oy] = toXY(lat0,lon0,ad.lat0,ad.lon0); return { ad, ox, oy, lim: limDe(ad), col: colunaDe(ad, perfilId) }; });
+  const xmin = Math.min(...offs.map(o=>o.ox-o.lim)), xmax = Math.max(...offs.map(o=>o.ox+o.lim));
+  const ymin = Math.min(...offs.map(o=>o.oy-o.lim)), ymax = Math.max(...offs.map(o=>o.oy+o.lim));
   const W = Math.ceil((xmax-xmin)/PX_M), H = Math.ceil((ymax-ymin)/PX_M);
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
   const ctx = cv.getContext('2d'), img = ctx.createImageData(W, H);
@@ -313,8 +326,8 @@ function imagemFRZ(grupo, col){
       let piso = 999;
       for(const o of offs){
         const lx = x - o.ox, ly = y - o.oy;
-        if(Math.hypot(lx,ly) > LIM_FRZ) continue;
-        const c = classificaXY(o.ad, lx, ly, col);
+        if(Math.hypot(lx,ly) > o.lim) continue;
+        const c = classificaXY(o.ad, lx, ly, o.col);
         if(c.piso < piso) piso = c.piso;
       }
       if(piso === 999) continue; // fora: transparente
@@ -329,7 +342,7 @@ function imagemFRZ(grupo, col){
 
 // Mostra as FRZ da coluna do tipo de operação escolhido (calcula aos poucos para não travar a página)
 function atualizarFRZ(){
-  const col = PERFIS[$('perfil').value].colAD;
+  const perfilId = $('perfil').value, col = PERFIS[perfilId].colAD; // col1 ou col2 define todo o desenho
   if(col === colAtual) return;
   colAtual = col;
   if(camadaFRZ) mapa.removeLayer(camadaFRZ);
@@ -340,7 +353,7 @@ function atualizarFRZ(){
     const passo = () => {
       if(!fila.length){ $('calc').textContent = ''; return; }
       $('calc').textContent = `Calculando FRZ… ${total - fila.length + 1}/${total}`;
-      setTimeout(() => { const im = imagemFRZ(fila.shift(), col); grupo.addLayer(im); im.bringToBack(); passo(); }, 0);
+      setTimeout(() => { const im = imagemFRZ(fila.shift(), perfilId); grupo.addLayer(im); im.bringToBack(); passo(); }, 0);
     };
     passo();
   }
@@ -369,6 +382,10 @@ function iniciarMapa(){
     L.circleMarker(ad.arp, { radius: 3, color: '#14304f', fillColor: '#fff', fillOpacity: 1, weight: 2, interactive: false })
       .bindTooltip(ad.id + (ad.incompleto ? ' (sem dados de pista)' : ''), { permanent: true, direction: 'right', className: 'adlbl', offset: [6, 0] })
       .addTo(mapa);
+  }
+  for(const h of HELIPONTOS){
+    L.marker(h.arp, { icon: L.divIcon({ className: '', html: '<div class="hpico">H</div>', iconSize: [16,16], iconAnchor: [8,8] }), interactive: true })
+      .bindTooltip(`${h.id} – ${h.nome} (${h.cidade}) · heliponto ${h.regra}`, { direction: 'top', offset: [0,-8] }).addTo(mapa);
   }
   camadaOp = L.layerGroup().addTo(mapa);
   atualizarFRZ();
@@ -401,7 +418,7 @@ function desenharCanvas(){
   const perfil = PERFIS[$('perfil').value];
   const img = ctx.createImageData(W, H);
   // aeródromos relevantes para a janela
-  const ads = AERODROMOS.filter(ad => !ad.incompleto).map(ad => {
+  const ads = SITIOS.filter(ad => !ad.incompleto).map(ad => {
     const [ox, oy] = toXY(lat0, lon0, ad.lat0, ad.lon0); return { ad, ox, oy };
   }).filter(o => Math.hypot(o.ox, o.oy) < meia*1.5 + 12000);
   const lim = 9000; // desenha o último anel até 9 km (limite externo não definido)
@@ -412,7 +429,8 @@ function desenharCanvas(){
       for(const o of ads){
         const lx = x - o.ox, ly = y - o.oy;
         if(Math.hypot(lx,ly) > lim) continue;
-        const c = classificaXY(o.ad, lx, ly, perfil.colAD);
+        if(o.ad.tipo === 'HP' && Math.hypot(lx,ly) > LIM_HP) continue;
+        const c = classificaXY(o.ad, lx, ly, colunaDe(o.ad, $('perfil').value));
         if(c.piso < piso) piso = c.piso;
       }
       const k = (j*W+i)*4;
