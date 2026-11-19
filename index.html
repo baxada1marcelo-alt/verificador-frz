@@ -77,9 +77,9 @@
 </head>
 <body>
 <header>
-  <h1>Verificador FRZ – Aeródromos e Helipontos do RS</h1>
+  <h1>Verificador FRZ e Áreas Restritas – RS</h1>
   <span class="sub">Consulta rápida: o voo do drone entra em Zona de Restrição de Voo? Precisa de Termo de Coordenação?</span>
-  <span class="ver">v4 · 19/11/2026</span>
+  <span class="ver">v5 · 19/11/2026</span>
 </header>
 
 <main>
@@ -162,18 +162,22 @@
         <span><i style="background:var(--s3)"></i>a partir de 300 ft</span>
         <span><i style="background:var(--s4)"></i>a partir de 400 ft (último anel)</span>
         <span><i style="background:#fff;border:2px solid #14304f;border-radius:50%"></i>H = heliponto</span>
+        <span><i style="background:rgba(163,34,28,.25);border:2px solid #a3221c"></i>Área proibida (P)</span>
+        <span><i style="background:rgba(106,27,154,.2);border:2px solid #6a1b9a"></i>Área restrita (R)</span>
+        <span><i style="background:rgba(230,160,0,.2);border:2px dashed #b07800"></i>Área perigosa (D)</span>
       </div>
-      <div class="hint" style="margin-top:6px" id="mapHint">Os anéis mudam conforme o tipo de operação escolhido. Use a barra "Cor das FRZ" para ver melhor a imagem por baixo e o botão de camadas (canto do mapa) para trocar entre satélite e mapa de ruas. O último anel (azul) aparece até 9 km do aeródromo e 4,5 km do heliponto só como referência: nele a FRZ só começa em 400 ft. Passe o mouse no "H" para ver o nome do heliponto. Imagem de satélite: Esri (precisa de internet).</div>
+      <div class="hint" style="margin-top:6px" id="mapHint">Os anéis mudam conforme o tipo de operação escolhido. Use a barra "Cor das FRZ" para ver melhor a imagem por baixo e o botão de camadas (canto do mapa) para trocar entre satélite e mapa de ruas. O último anel (azul) aparece até 9 km do aeródromo e 4,5 km do heliponto só como referência: nele a FRZ só começa em 400 ft. Passe o mouse no "H" ou numa área (P/R/D) para ver nome e limites. Imagem de satélite: Esri (precisa de internet).</div>
     </div>
 
     <div class="foot">
       <b>Orientação prévia – a confirmação oficial é feita no SARPAS.</b><br>
-      Cobre FRZ de <b>aeródromos</b> (ICA 100-40, Art. 14) e de <b>helipontos</b> cadastrados no AISWEB (Art. 15). <b>Não</b> cobre: FRZ de áreas de segurança e locais de interesse estratégico (Arts. 13 e 16 – dimensões divulgadas caso a caso por produto AIS), EAC – TRA, TSA, áreas restritas, proibidas e perigosas (Art. 29), Rotas Especiais de Helicóptero (Art. 30) e NOTAM vigentes.<br>
+      Cobre: FRZ de <b>aeródromos</b> (ICA 100-40, Art. 14), FRZ de <b>helipontos</b> cadastrados no AISWEB (Art. 15) e as <b>áreas proibidas, restritas e perigosas</b> que tocam o RS publicadas na AIP, ENR 5.1 (Art. 29) – <span id="eacFonte"></span>. <b>Não</b> cobre: TRA, TSA e áreas temporárias divulgadas por NOTAM ou Suplemento AIP, Rotas Especiais de Helicóptero (Art. 30) e NOTAM vigentes. Áreas cujo limite inferior está em nível de voo (FL) não afetam drones e não são mostradas.<br>
       Tabelas e figuras: ICA 100-40/2026, Figs. 2 a 5 (as vistas de perfil mostram a FRZ em degraus: em cada anel ela começa na altura indicada). Geometria detalhada da ZAD/ZEA conforme ICA 100-40/2023 (itens 2.1.69–2.1.71), como referência interpretativa. Dados de aeródromos e helipontos: AISWEB/DECEA, consultados em 19/11/2026.
     </div>
   </section>
 </main>
 
+<script src="eac-rs.js"></script>
 <script src="frz.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -248,20 +252,40 @@ function verificar(){
   estado.lat = c.lat; estado.lon = c.lon; estado.centro = [c.lat, c.lon];
   const res = avaliar(c.lat, c.lon, raio, alt, perfilId);
 
+  const eac = avaliarEAC(c.lat, c.lon, raio, alt);
+  const eP = eac.filter(e => e.status === 'proibida'), eR = eac.filter(e => e.status === 'dentro');
+  const eI = eac.filter(e => e.status === 'indef'), eD = eac.filter(e => e.status === 'perigosa');
+  const nomeE = e => `<b>${e.a.id}</b> ${e.a.nome}`;
+
   const dentro = res.filter(r => r.status === 'dentro');
   const indef = res.filter(r => r.status === 'indef');
   let cls, big, txt;
-  if(dentro.length){
-    cls='dentro'; big='ENTRA EM FRZ – Termo de Coordenação obrigatório';
-    txt=`FRZ de: ${dentro.map(r=>`<b>${r.ad.id}</b> (${r.ad.cidade})`).join(', ')}. Base legal: ICA 100-40, Art. 28 ("É obrigatória a apresentação do Termo de Coordenação quando a Operação possuir interseção com FRZ"). Dispensado apenas se o voo for em Área Adequada (Art. 28, parágrafo único).`;
-  } else if(indef.length){
+  if(eP.length){
+    cls='dentro'; big='OPERAÇÃO PROIBIDA – área proibida';
+    txt=`O voo toca a área proibida ${eP.map(nomeE).join(', ')}. Base legal: ICA 100-40, Art. 29, I ("é vedada a operação em área proibida").`;
+    if(dentro.length || eR.length) txt += ` Também há interseção com ${[...dentro.map(r=>'FRZ de <b>'+r.ad.id+'</b>'), ...eR.map(nomeE)].join(', ')}.`;
+  } else if(dentro.length || eR.length){
+    cls='dentro'; big='Termo de Coordenação obrigatório';
+    const partes = [];
+    if(dentro.length) partes.push(`<b>entra em FRZ</b> de ${dentro.map(r=>`<b>${r.ad.id}</b> (${r.ad.cidade})`).join(', ')} – ICA 100-40, Art. 28 ("É obrigatória a apresentação do Termo de Coordenação quando a Operação possuir interseção com FRZ"); dispensado apenas em Área Adequada (Art. 28, parágrafo único)`);
+    if(eR.length) partes.push(`<b>toca área restrita</b> ${eR.map(nomeE).join(', ')} – ICA 100-40, Art. 29, II ("é obrigatória a apresentação do Termo de Coordenação quando a operação possuir interseção com TRA, TSA ou área restrita")`);
+    txt = 'O voo ' + partes.join('; e ') + '.';
+  } else if(indef.length || eI.length){
     cls='indef'; big='INDEFINIDO – confirmar no SARPAS';
-    txt=`Não foi possível concluir para: ${indef.map(r=>`<b>${r.ad.id}</b>`).join(', ')}. ${indef.some(r=>r.incompleto)?'Faltam dados das cabeceiras desse aeródromo. ':''}${indef.some(r=>!r.incompleto)?'O voo chega a 400 ft no último anel da FRZ (setor E/J), onde a FRZ começa em 400 ft e a norma não define o limite externo. Abaixo de 400 ft esse anel não é atingido. ':''}`;
+    txt = '';
+    if(indef.length) txt += `Não foi possível concluir para: ${indef.map(r=>`<b>${r.ad.id}</b>`).join(', ')}. ${indef.some(r=>r.incompleto)?'Faltam dados das cabeceiras desse aeródromo. ':''}${indef.some(r=>!r.incompleto)?'O voo chega a 400 ft no último anel da FRZ (setor E/J), onde a FRZ começa em 400 ft e a norma não define o limite externo. Abaixo de 400 ft esse anel não é atingido. ':''}`;
+    if(eI.length) txt += `O voo está embaixo de ${eI.map(e=>nomeE(e)+' (começa em '+e.a.inf.txt+')').join(', ')}. Esse limite é medido a partir do nível do mar (AMSL): se o voo alcança ou não depende da altitude do terreno no local – confira a elevação do terreno e o SARPAS.`;
   } else {
-    cls='fora'; big='NÃO ENTRA EM FRZ de aeródromo/heliponto';
-    txt= res.length ? 'O voo fica fora das FRZ dos aeródromos e helipontos cadastrados próximos. Pelos Arts. 14 e 15, não há necessidade de Termo de Coordenação por causa de aeródromo ou heliponto.' : 'Nenhum aeródromo cadastrado num raio de 20 km nem heliponto próximo.';
-    txt += ' <b>Atenção:</b> isso não cobre FRZ de áreas de segurança nem áreas restritas/proibidas/perigosas – ver aviso no rodapé.';
+    cls='fora'; big='NÃO ENTRA EM FRZ nem em área restrita/proibida';
+    txt= res.length ? 'O voo fica fora das FRZ dos aeródromos e helipontos cadastrados próximos e das áreas proibidas/restritas da AIP (ENR 5.1). Não há necessidade de Termo de Coordenação por esses motivos (Arts. 14, 15, 28 e 29).' : 'Nenhum aeródromo cadastrado num raio de 20 km nem heliponto, área proibida ou restrita no local.';
+    txt += ' <b>Atenção:</b> TRA/TSA e áreas temporárias são divulgadas por NOTAM/Suplemento AIP – ver aviso no rodapé.';
   }
+  const linhasE = eac.map(e => {
+    const tipo = {P:'Área proibida', R:'Área restrita', D:'Área perigosa'}[e.a.tipo];
+    const tag = {proibida:['dentro','Proibida'], dentro:['dentro','TCo'], perigosa:['indef','Perigosa'], indef:['indef','Confirmar']}[e.status];
+    const conc = {proibida:'Operação vedada (Art. 29, I).', dentro:'Termo de Coordenação obrigatório (Art. 29, II).', perigosa:'Termo de Coordenação dispensado; cabe ao piloto decidir se aceita os riscos (Art. 29, III e parágrafo único).', indef:'Depende da altitude do terreno (limite em AMSL).'}[e.status];
+    return `<tr><td><b>${e.a.id}</b><br><span class="hint">${tipo}</span></td><td class="num">${e.dist===0?'dentro':fmtN(e.dist)+' m'}</td><td>${e.a.inf.txt} até ${e.a.sup.txt}</td><td style="font-size:13px"><b>${e.a.nome}</b>. ${conc}<br><span class="hint">${e.a.rmk}</span></td><td><span class="tag ${tag[0]}">${tag[1]}</span></td></tr>`;
+  }).join('');
 
   const warns = [];
   if(alt > 400) warns.push('Acima de 400 ft (120 m): a operação só é feita com segregação do espaço aéreo, divulgada por produto AIS (ICA 100-40, Art. 25, II).');
@@ -273,6 +297,8 @@ function verificar(){
     if(res.some(r => r.ad.tipo === 'AD' && !r.incompleto && r.status !== 'fora')) warns.push('Operação no entorno de estrutura perto de aeroporto: "manter-se afastado, no mínimo, 500 metros" (ICA 100-40, Fig. 2, nota 4).');
     if(res.some(r => r.ad.tipo === 'HP' && r.status !== 'fora')) warns.push('Operação no entorno de estrutura perto de heliponto: "manter-se afastado, no mínimo, 200 metros" (ICA 100-40, Fig. 4, nota 4).');
   }
+  if(eD.length) warns.push(`Área perigosa: ${eD.map(nomeE).join(', ')}. Termo de Coordenação dispensado, mas cabe ao piloto decidir se aceita os possíveis riscos (ICA 100-40, Art. 29, III e parágrafo único).`);
+  if(eac.some(e => /NOTAM|SUPLEMENTO|SUPLEMENT|coordena/i.test(e.a.rmk))) warns.push('Algumas áreas acima só ficam ativas por NOTAM, Suplemento AIP ou coordenação com o órgão ATS (veja a observação de cada uma). O SARPAS considera a situação do dia.');
   if(c.assumido) warns.push('Hemisfério não informado: considerei Sul e Oeste. Confira a coordenada.');
   res.forEach(r => { if(r.ad.obs && r.dARP < 12000) warns.push(`${r.ad.id}: ${r.ad.obs}`); });
 
@@ -288,6 +314,7 @@ function verificar(){
     ${warns.length ? '<ul class="warns">'+warns.map(w=>'<li>'+w+'</li>').join('')+'</ul>' : ''}
     <div style="font-size:13px;margin-bottom:8px">Ponto: <span class="mono">${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}</span> · <span class="mono">${dmsTxt(c.lat,'N','S')} ${dmsTxt(c.lon,'E','W')}</span> · ${alt} ft (${fmtN(ftToM(alt))} m) · raio ${fmtN(raio)} m · ${PERFIS[perfilId].nome} · <a class="gm" href="${gm}" target="_blank" rel="noopener">ver no Google Maps</a></div>
     ${res.length ? `<table><thead><tr><th>Local</th><th>Distância</th><th>Zona</th><th>Explicação</th><th></th></tr></thead><tbody>${linhas}</tbody></table>` : ''}
+    ${eac.length ? `<h2 style="margin:16px 0 6px">Áreas proibidas, restritas e perigosas (AIP ENR 5.1)</h2><table><thead><tr><th>Área</th><th>Distância</th><th>Limites</th><th>Explicação</th><th></th></tr></thead><tbody>${linhasE}</tbody></table>` : ''}
     <div class="hint" style="margin-top:10px">Orientação prévia. A confirmação oficial é feita no SARPAS ao cadastrar o voo.</div>`;
   desenhar();
 }
@@ -375,7 +402,19 @@ function iniciarMapa(){
     maxZoom: 19, pane: 'shadowPane' }).addTo(mapa);
   const ruas = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19, attribution: '&copy; colaboradores do OpenStreetMap' });
-  L.control.layers({ 'Satélite': sat, 'Mapa de ruas': ruas }, { 'Nomes de cidades': nomes }, { position: 'topright' }).addTo(mapa);
+  // áreas proibidas/restritas/perigosas que podem afetar drones (limite inferior GND, AGL ou AMSL baixo)
+  const areas = L.layerGroup().addTo(mapa);
+  const estilo = { P: { color: '#a3221c', fillColor: '#a3221c', fillOpacity: .18, weight: 2 },
+                   R: { color: '#6a1b9a', fillColor: '#6a1b9a', fillOpacity: .12, weight: 2 },
+                   D: { color: '#b07800', fillColor: '#e6a000', fillOpacity: .12, weight: 2, dashArray: '6 4' } };
+  for(const a of EAC){
+    if(a.inf.ref === 'FL' || (a.inf.ref === 'AMSL' && a.inf.ft > 4600 + 400)) continue;
+    const st = Object.assign({ interactive: true }, estilo[a.tipo]);
+    const forma = a.circ ? L.circle(a.circ.c, Object.assign({ radius: a.circ.r }, st)) : L.polygon(a.poly, st);
+    forma.bindTooltip(`<b>${a.id}</b> ${a.nome}<br>${{P:'Proibida',R:'Restrita',D:'Perigosa'}[a.tipo]} · ${a.inf.txt} até ${a.sup.txt}`, { sticky: true });
+    forma.addTo(areas);
+  }
+  L.control.layers({ 'Satélite': sat, 'Mapa de ruas': ruas }, { 'Nomes de cidades': nomes, 'Áreas P/R/D (AIP)': areas }, { position: 'topright' }).addTo(mapa);
   L.control.scale({ imperial: false, position: 'bottomleft' }).addTo(mapa);
 
   // pistas e nomes dos aeródromos
@@ -491,6 +530,7 @@ $('map').addEventListener('click', ev => {
 });
 
 // Limpar dados: volta todos os campos ao início, apaga o resultado e o ponto do mapa
+$('eacFonte').textContent = 'fonte: ' + EAC_FONTE;
 $('limpar').addEventListener('click', () => {
   $('coord').value = '';
   $('alt').value = 200; $('altm').textContent = '≈ 61 m acima do solo';

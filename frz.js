@@ -197,4 +197,53 @@ function avaliar(lat, lon, raio, alturaFt, perfilId) {
   return res;
 }
 
-if (typeof module !== 'undefined') module.exports = { AERODROMOS, HELIPONTOS, SITIOS, PERFIS, avaliar, classificaXY, colunaDe, toXY, fromXY, dms };
+// ===== Espaços Aéreos Condicionados – EAC (ICA 100-40, Art. 29; dados em eac-rs.js, AIP ENR 5.1) =====
+// P = área proibida (operação vedada), R = área restrita (Termo de Coordenação obrigatório),
+// D = área perigosa (Termo de Coordenação dispensado; o piloto decide se aceita os riscos).
+const ALT_MAX_TERRENO_RS_FT = 4600; // ponto mais alto do RS ≈ 1.400 m (usado só para descartar áreas que começam muito alto)
+let EAC_LISTA = [];
+if (typeof EAC !== 'undefined') EAC_LISTA = EAC;
+else if (typeof require !== 'undefined') { try { EAC_LISTA = require('./eac-rs.js').EAC; } catch (e) { EAC_LISTA = []; } }
+
+function dentroPoligono(x, y, P) {
+  let d = false;
+  for (let i = 0, j = P.length - 1; i < P.length; j = i++) {
+    const [xi, yi] = P[i], [xj, yj] = P[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) d = !d;
+  }
+  return d;
+}
+
+// Distância (m) da área de operação até a área: 0 = o centro da operação está dentro
+function distanciaEAC(a, lat, lon) {
+  if (a.circ) { const [x, y] = toXY(a.circ.c[0], a.circ.c[1], lat, lon); return Math.max(0, Math.hypot(x, y) - a.circ.r); }
+  const P = a.poly.map(p => toXY(lat, lon, p[0], p[1]));
+  if (dentroPoligono(0, 0, P)) return 0;
+  let m = Infinity;
+  for (let i = 0; i < P.length; i++) { const A = P[i], B = P[(i + 1) % P.length]; m = Math.min(m, distSeg(0, 0, A[0], A[1], B[0], B[1])); }
+  return m;
+}
+
+// Retorna as áreas que tocam a operação: { a, status: 'proibida'|'dentro'|'perigosa'|'indef', motivo }
+function avaliarEAC(lat, lon, raio, alturaFt) {
+  const res = [];
+  for (const a of EAC_LISTA) {
+    const d = distanciaEAC(a, lat, lon);
+    if (d > raio) continue;                                 // não toca a área lateralmente
+    const inf = a.inf;
+    let vertical; // 'sim' | 'nao' | 'talvez'
+    if (inf.ref === 'GND') vertical = 'sim';
+    else if (inf.ref === 'AGL') vertical = alturaFt >= inf.ft ? 'sim' : 'nao';
+    else if (inf.ref === 'AMSL') vertical = inf.ft > ALT_MAX_TERRENO_RS_FT + alturaFt ? 'nao' : 'talvez';
+    else vertical = 'nao';                                  // começa em nível de voo (FL): muito acima de drones
+    if (vertical === 'nao') continue;
+    let status;
+    if (vertical === 'talvez') status = 'indef';
+    else status = a.tipo === 'P' ? 'proibida' : a.tipo === 'R' ? 'dentro' : 'perigosa';
+    res.push({ a, status, dist: d });
+  }
+  const ordem = { proibida: 0, dentro: 1, indef: 2, perigosa: 3 };
+  return res.sort((x, y) => ordem[x.status] - ordem[y.status]);
+}
+
+if (typeof module !== 'undefined') module.exports = { AERODROMOS, HELIPONTOS, SITIOS, PERFIS, EAC: EAC_LISTA, avaliar, avaliarEAC, classificaXY, colunaDe, toXY, fromXY, dms };

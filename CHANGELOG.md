@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## v5 – 19/11/2026
+- **Áreas proibidas (P), restritas (R) e perigosas (D)** – ICA 100-40, Art. 29: 63 áreas que tocam o RS, extraídas da AIP Brasil, ENR 5.1 (emenda AIRAC A 25/2026, efetiva 24 DEC 2026), conferidas com a carta ENRC L1 (29 OCT 2026).
+  - P → "OPERAÇÃO PROIBIDA" (Art. 29, I); R → Termo de Coordenação obrigatório (Art. 29, II); D → aviso, TCo dispensado (Art. 29, III).
+  - Limite inferior GND/AGL comparado com a altura do voo; limite em AMSL → "confirmar" (depende do terreno), a não ser que comece acima de 4.600 ft + altura do voo; limite em FL → não afeta drones.
+- Mapa: áreas P/R/D desenhadas (camada que pode ser ligada/desligada), com nome e limites ao passar o mouse.
+- Novo arquivo `eac-rs.js` (dados) e `ferramentas/extrair-eac.js` (gera os dados a partir do PDF da AIP).
+- Testes: 6 casos de áreas P/R/D.
+
 ## v4 – 19/11/2026
 - **Helipontos**: 35 helipontos do RS (AISWEB/ROTAER, 19/11/2026) com FRZ de heliponto (ZEH – ICA 100-40, Art. 15, Fig. 4). Heliponto IFR usa a coluna 1 nas operações padrão/recreativa/etc.; heliponto VFR usa sempre a coluna 2.
 - **Último anel (E/J)**: conferido nas vistas de perfil da ICA 100-40/2026 (Figs. 3 e 5) – a FRZ começa em 400 ft nesse anel. Abaixo de 400 ft o resultado é "não entra"; só com 400 ft ou mais fica "confirmar no SARPAS" (acima de 400 ft já vale a segregação do Art. 25).

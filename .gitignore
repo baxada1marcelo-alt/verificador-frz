@@ -1,0 +1,4 @@
+# documentos grandes de consulta (AIP, cartas) – não vão para o GitHub
+*.pdf
+# configuração local do Claude
+.claude/

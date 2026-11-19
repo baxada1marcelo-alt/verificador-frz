@@ -62,3 +62,27 @@ for (const [id, d, alt, perfil, setor, status] of casosHP) {
 // longe de heliponto (setor E) e abaixo de 400 ft: não aparece na lista
 { const [lat, lon] = pontoHP('SDWY', 5000); assert.ok(!f.avaliar(lat, lon, 0, 200, 'recreativa').some(x => x.ad.id === 'SDWY')); okHP++; }
 console.log(`${okHP}/${casosHP.length + 1} testes de helipontos OK`);
+
+// ===== Áreas proibidas/restritas/perigosas (AIP ENR 5.1 – ICA 100-40, Art. 29) =====
+const centro = a => a.circ ? a.circ.c : [a.poly.reduce((s, p) => s + p[0], 0) / a.poly.length, a.poly.reduce((s, p) => s + p[1], 0) / a.poly.length];
+const area = id => f.EAC.find(a => a.id === id);
+const casosE = [
+  // [área, altura ft, status esperado]  (ponto no centro da área)
+  ['SBP505', 100, 'proibida'],   // Refinaria Alberto Pasqualini – GND
+  ['SBR520', 100, 'dentro'],     // Sepé – restrita, GND → Termo de Coordenação
+  ['SBD578', 100, 'perigosa'],   // Obstáculo Porto Alegre 1 – perigosa
+  ['SBR551', 200, null],         // Erechim – começa em 1500 ft AGL: drone a 200 ft não atinge
+  ['SBR551', 1500, 'dentro'],
+];
+let okE = 0;
+for (const [id, alt, st] of casosE) {
+  const [lat, lon] = centro(area(id));
+  const r = f.avaliarEAC(lat, lon, 0, alt).find(x => x.a.id === id);
+  assert.strictEqual(r ? r.status : null, st, `${id} alt=${alt}`);
+  okE++;
+}
+// raio: ponto 1 km fora da área circular SBP597 (Charqueadas, raio 6 km) – sem raio não toca, com 1,5 km toca
+{ const a = area('SBP597'); const [lat, lon] = f.fromXY(a.circ.c[0], a.circ.c[1], 0, a.circ.r + 1000);
+  assert.ok(!f.avaliarEAC(lat, lon, 0, 100).some(x => x.a.id === 'SBP597'));
+  assert.ok(f.avaliarEAC(lat, lon, 1500, 100).some(x => x.a.id === 'SBP597')); okE++; }
+console.log(`${okE}/${casosE.length + 1} testes de áreas P/R/D OK`);

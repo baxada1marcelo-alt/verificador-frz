@@ -13,7 +13,10 @@ Contexto para o Claude Code trabalhar neste projeto.
 - `testes/teste-frz.js` – testes da lógica: `node testes/teste-frz.js`.
 - `docs/diretrizes-de-resposta.md` – regras de resposta e tabelas da norma.
 - `docs/geometria-frz-e-aerodromos.md` – geometria das zonas, interpretação da altura e dados dos aeródromos (fontes).
+- `eac-rs.js` – áreas proibidas/restritas/perigosas do RS (gerado, não editar à mão).
+- `ferramentas/extrair-eac.js` – gera o `eac-rs.js` a partir do PDF da AIP (instruções no topo do arquivo).
 - `CHANGELOG.md` – histórico de versões.
+- PDFs da AIP/cartas ficam na pasta só para consulta (o `.gitignore` não deixa irem para o GitHub).
 
 ## Regras de cálculo (resumo)
 - **ZEA**: distância ao eixo da pista (segmento entre as cabeceiras). Tabela coluna 1: 1740/2350/2960/3570 m → pisos 0/100/200/300/400 ft.
@@ -36,6 +39,6 @@ Contexto para o Claude Code trabalhar neste projeto.
 2. ~~Limite externo dos setores E/J~~ – resolvido na prática (v4): nesse anel a FRZ começa em 400 ft; abaixo disso não entra. O limite externo continua sem definição na norma, mas só importa para voo com 400 ft ou mais.
 3. Cabeceiras do SJRG (Rio Grande) – desconsiderada por decisão do Marcelo (19/11/2026).
 4. Cabeceiras de SBCO (Canoas) – desconsiderada por decisão do Marcelo (19/11/2026).
-5. ~~Helipontos~~ – feito na v4 (35 helipontos do AISWEB). Ainda faltam: FRZ de áreas de segurança/locais estratégicos (Arts. 13 e 16) e EAC (Art. 29). A norma diz que as dimensões são "divulgadas por meio de produto AIS" caso a caso (AIP ENR 5.1, NOTAM, mapa do SARPAS) – não há tabela fixa. Precisa de uma fonte oficial com a lista e as coordenadas dessas áreas no RS.
+5. ~~Helipontos~~ – feito na v4. ~~Áreas P/R/D (Art. 29) e áreas de segurança publicadas como área proibida (ex.: refinaria, presídios)~~ – feito na v5 a partir da AIP ENR 5.1 (emenda A 25/2026, efetiva 24/12/2026). Faltam: TRA/TSA e áreas temporárias (vêm por NOTAM/Suplemento AIP). **A cada nova emenda AIRAC da AIP, rodar `ferramentas/extrair-eac.js` de novo.**
 7. Lista de helipontos muda com o tempo: reconferir no AISWEB (Aeródromos → Tipo Heliponto, UF RS) de tempos em tempos.
 6. ~~Mapa com imagem de satélite~~ – feito na v3 (Leaflet + Esri), publicado em https://baxada1marcelo-alt.github.io/verificador-frz/
