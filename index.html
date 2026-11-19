@@ -95,7 +95,7 @@
 <header>
   <h1>Verificador FRZ e Áreas Restritas – RS</h1>
   <span class="sub">Consulta rápida: o voo do drone entra em Zona de Restrição de Voo? Precisa de Termo de Coordenação?</span>
-  <span class="ver">v7 · 19/11/2026</span>
+  <span class="ver">v8 · 19/11/2026</span>
 </header>
 
 <main>
@@ -166,7 +166,7 @@
       <div style="font-size:13.5px">
         <p style="margin:0 0 8px"><b>FRZ</b> = Zona de Restrição de Voo em volta de aeródromos. Ela é formada por <b>anéis</b>: quanto mais perto do aeródromo, mais baixa começa a restrição.</p>
         <p style="margin:0 0 8px"><b>ZEA</b> = entorno do aeródromo (medida a partir do eixo da pista).<br><b>ZAD</b> = rampa de pouso e decolagem (medida a partir da cabeceira, abertura de 20°).</p>
-        <p style="margin:0">Se a <b>altura do voo alcança o piso</b> do anel onde ele está, o voo <b>entra em FRZ</b> e o Termo de Coordenação é obrigatório (ICA 100-40, Art. 28).</p>
+        <p style="margin:0">Se a <b>altura do voo passa do piso</b> do anel onde ele está, o voo <b>entra em FRZ</b> (voar exatamente no piso não entra – igual ao SARPAS) e o Termo de Coordenação é obrigatório (ICA 100-40, Art. 28).</p>
       </div>
     </div>
   </section>
@@ -212,7 +212,7 @@
     <div class="foot">
       <b>Orientação prévia – a confirmação oficial é feita no SARPAS.</b><br>
       Cobre: FRZ de <b>aeródromos</b> (ICA 100-40, Art. 14), FRZ de <b>helipontos</b> cadastrados no AISWEB (Art. 15) e as <b>áreas proibidas, restritas e perigosas</b> que tocam o RS publicadas na AIP, ENR 5.1 (Art. 29) – <span id="eacFonte"></span>. <b>Não</b> cobre: TRA, TSA e áreas temporárias divulgadas por NOTAM ou Suplemento AIP, Rotas Especiais de Helicóptero (Art. 30) e NOTAM vigentes. Áreas cujo limite inferior está em nível de voo (FL) não afetam drones e não são mostradas.<br>
-      Tabelas e figuras: ICA 100-40/2026, Figs. 2 a 5 (as vistas de perfil mostram a FRZ em degraus: em cada anel ela começa na altura indicada). Geometria detalhada da ZAD/ZEA conforme ICA 100-40/2023 (itens 2.1.69–2.1.71), como referência interpretativa. Dados de aeródromos e helipontos: AISWEB/DECEA, consultados em 19/11/2026.
+      Tabelas e figuras: ICA 100-40/2026, Figs. 2 a 5 (as vistas de perfil mostram a FRZ em degraus: em cada anel ela começa na altura indicada; voar exatamente nessa altura não entra – conferido no SARPAS em 19/11/2026). Geometria detalhada da ZAD/ZEA conforme ICA 100-40/2023 (itens 2.1.69–2.1.71), como referência interpretativa. Dados de aeródromos e helipontos: AISWEB/DECEA, consultados em 19/11/2026.
     </div>
   </section>
 </main>
@@ -276,8 +276,8 @@ function explicar(r, alt){
   const piso = p.piso === 0 ? 'desde o solo' : `a partir de ${p.piso} ft`;
   let conc;
   if(r.status === 'dentro') conc = `O voo vai até ${alt} ft → <b>entra na FRZ</b>.`;
-  else if(r.status === 'fora') conc = `O voo vai até ${alt} ft, abaixo do piso → <b>não entra</b>.`;
-  else conc = `Último anel (setor ${p.setor}): a FRZ só começa em 400 ft e a norma não define até onde esse anel vai. Com ${alt} ft → <b>confirmar no SARPAS</b>.`;
+  else if(r.status === 'fora') conc = alt === p.piso ? `O voo vai até ${alt} ft, exatamente no piso, sem passar dele → <b>não entra</b> (mesmo critério do SARPAS).` : `O voo vai até ${alt} ft, abaixo do piso → <b>não entra</b>.`;
+  else conc = `Último anel (setor ${p.setor}): a FRZ só começa acima de 400 ft e a norma não define até onde esse anel vai. Com ${alt} ft → <b>confirmar no SARPAS</b> (acima de 400 ft já vale a segregação do Art. 25).`;
   return `Parte mais crítica da área ${onde} – setor <b>${p.setor}</b>, FRZ ${piso}. ${conc}`;
 }
 
@@ -350,7 +350,7 @@ function verificar(){
   } else if(indef.length || eI.length){
     cls='indef'; big='INDEFINIDO – confirmar no SARPAS';
     txt = '';
-    if(indef.length) txt += `Não foi possível concluir para: ${indef.map(r=>`<b>${r.ad.id}</b>`).join(', ')}. ${indef.some(r=>r.incompleto)?'Faltam dados das cabeceiras desse aeródromo. ':''}${indef.some(r=>!r.incompleto)?'O voo chega a 400 ft no último anel da FRZ (setor E/J), onde a FRZ começa em 400 ft e a norma não define o limite externo. Abaixo de 400 ft esse anel não é atingido. ':''}`;
+    if(indef.length) txt += `Não foi possível concluir para: ${indef.map(r=>`<b>${r.ad.id}</b>`).join(', ')}. ${indef.some(r=>r.incompleto)?'Faltam dados das cabeceiras desse aeródromo. ':''}${indef.some(r=>!r.incompleto)?'O voo passa de 400 ft no último anel da FRZ (setor E/J), onde a FRZ começa em 400 ft e a norma não define o limite externo. Até 400 ft esse anel não é atingido. ':''}`;
     if(eI.length) txt += `O voo está embaixo de ${eI.map(e=>nomeE(e)+' (começa em '+e.a.inf.txt+')').join(', ')}. Esse limite é medido a partir do nível do mar (AMSL): se o voo alcança ou não depende da altitude do terreno no local – confira a elevação do terreno e o SARPAS.`;
   } else {
     cls='fora'; big='NÃO ENTRA EM FRZ nem em área restrita/proibida';

@@ -23,7 +23,7 @@ Exemplo – aeroporto, ZAD, coluna 1 (recreativa/padrão):
 - 5400–6320 m (I): a partir de 300 ft;
 - além de 6320 m (J): a partir de 400 ft.
 
-Mesma lógica para ZEA (A a E) e ZEH. **Há interseção com FRZ (Art. 28 → Termo de Coordenação obrigatório) quando a altura máxima do voo ≥ piso do setor onde está o ponto.**
+Mesma lógica para ZEA (A a E) e ZEH. **Há interseção com FRZ (Art. 28 → Termo de Coordenação obrigatório) quando a altura máxima do voo PASSA do piso do setor onde está o ponto (> piso).** Conferido no SARPAS em 19/11/2026: ponto no setor B da SBSM a 100 ft = "Aprovação automática"; a 105 ft = conflito "FRZ de aeródromos/helipontos" (SBSM – 61 m/200 ft) e Termo de Coordenação obrigatório.
 
 Pendências:
 - (a) validar esta interpretação comparando com o SARPAS;
@@ -53,7 +53,7 @@ Texto oficial: ICA 100-40, Portaria DECEA nº 2.094/DNOR8, de 18/03/2026 (BCA n�
 
 - **Figs. 2 e 4 (vista superior)**: as tabelas usadas no Verificador (iguais às do item 2 acima e de `diretrizes-de-resposta.md`).
 - **Figs. 3 e 5 (vista de perfil)**: a FRZ aparece em **degraus**. Perto do aeródromo/heliponto ela vai do solo (0 ft) para cima; em cada anel seguinte ela só começa na altura indicada (100, 200, 300 ft). O conjunto é desenhado até 400 ft. No último anel (E/J, azul claro) não há volume colorido abaixo de 400 ft.
-- Conclusão usada: **altura máxima do voo ≥ altura do anel → entra em FRZ**. No último anel, a FRZ começa em 400 ft; acima de 400 ft vale o Art. 25 (segregação do espaço aéreo).
+- Conclusão usada: **altura máxima do voo > altura do anel → entra em FRZ** (no piso exato não entra – conferido no SARPAS). No último anel, a FRZ começa em 400 ft; acima de 400 ft vale o Art. 25 (segregação do espaço aéreo).
 - **Art. 16**: FRZ de áreas de segurança/locais de interesse estratégico e EAC têm limites "conforme autorizado e divulgado por meio de produto AIS" – não há tabela fixa na ICA.
 - **Art. 13, parágrafo único** – áreas de segurança, entre outras: refinarias; plataformas de petróleo; depósitos de combustível; estabelecimentos penais; áreas militares; sedes de Governo; usinas hidroelétricas, termoelétricas ou nucleares; subestações e linhas de transmissão; redes de água ou gás; barragens ou represas; redes de comunicação ou vigilância da navegação aérea.
 

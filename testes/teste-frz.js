@@ -21,8 +21,13 @@ const casos = [
   [0, 1500,   50, 'ZEA', 'A', 'dentro'],
   [0, 2000,   90, 'ZEA', 'B', 'fora'],
   [0, 2000,  150, 'ZEA', 'B', 'dentro'],
+  // conferido no SARPAS (19/11/2026, SBSM setor B): 100 ft = aprovado; 105 ft = conflito com FRZ
+  [0, 2000,  100, 'ZEA', 'B', 'fora'],
+  [0, 2000,  105, 'ZEA', 'B', 'dentro'],
+  [4000, 0,  100, 'ZAD', 'G', 'fora'],
   [7000, 0,  399, 'ZAD', 'J', 'fora'],
-  [7000, 0,  400, 'ZAD', 'J', 'indef'],
+  [7000, 0,  400, 'ZAD', 'J', 'fora'],
+  [7000, 0,  401, 'ZAD', 'J', 'indef'],
 ];
 
 let ok = 0;
@@ -45,7 +50,8 @@ const casosHP = [
   // [heliponto, distância (m), altura ft, tipo de operação, setor, status]
   ['SDWY', 1000,  10, 'recreativa', 'A', 'dentro'],  // VFR → coluna 2 (até 1130 m)
   ['SDWY', 1500,  90, 'recreativa', 'B', 'fora'],
-  ['SDWY', 1500, 100, 'recreativa', 'B', 'dentro'],
+  ['SDWY', 1500, 100, 'recreativa', 'B', 'fora'],    // exatamente no piso: não entra
+  ['SDWY', 1500, 101, 'recreativa', 'B', 'dentro'],
   ['SJJZ', 1500,  50, 'recreativa', 'A', 'dentro'],  // IFR → coluna 1 (até 1740 m)
   ['SJJZ', 1500,  50, 'especial',   'B', 'fora'],    // IFR + Aérea Especial → coluna 2
 ];

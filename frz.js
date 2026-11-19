@@ -187,7 +187,9 @@ function avaliar(lat, lon, raio, alturaFt, perfilId) {
       if (!pior || c.piso < pior.piso || (c.piso === pior.piso && c.dist < pior.dist)) pior = c;
     }
     let status;
-    if (alturaFt >= pior.piso) status = pior.extremo ? 'indef' : 'dentro';
+    // Regra conferida no SARPAS (19/11/2026, SBSM setor B): a 100 ft = aprovado; a 105 ft = conflito com FRZ.
+    // Ou seja, só entra quando a altura PASSA do piso; no anel A/F (desde o solo) qualquer voo entra.
+    if (pior.piso === 0 || alturaFt > pior.piso) status = pior.extremo ? 'indef' : 'dentro';
     else status = 'fora';
     // helipontos: só lista quando o voo está dentro dos anéis A–D ou quando o resultado não é "fora"
     if (ad.tipo === 'HP' && pior.extremo && status === 'fora') continue;

@@ -1,5 +1,11 @@
 # Histórico de versões
 
+## v8 – 19/11/2026
+- **Regra da altura conferida no SARPAS** (prints de 19/11/2026, ponto no setor B da SBSM): a 100 ft o SARPAS deu "Aprovação automática"; a 105 ft deu conflito com FRZ e Termo de Coordenação obrigatório.
+- A regra passou de "altura ≥ piso" para **"altura > piso"** (voar exatamente na altura do anel não entra). No anel A/F (desde o solo) qualquer voo entra.
+- Último anel (E/J): até 400 ft não entra; acima de 400 ft fica "confirmar no SARPAS".
+- Textos da página explicam o caso "exatamente no piso".
+
 ## v7 – 19/11/2026
 - Comparado com o SARPAS (print de 19/11/2026, ponto em Santa Maria a 390 ft, heliponto SDWY): a detecção de FRZ coincide; o "Não aceito" do SARPAS vinha do **prazo de antecedência**.
 - Novo campo opcional **"Início do voo"** e quadro **"Prazo de antecedência"** (ICA 100-40, Arts. 56 e 57): 30 min / 4 dias / 8 dias conforme o caso; avisa "SARPAS: não aceito – prazo insuficiente", início no passado, pedido com mais de 90 dias e área proibida (Art. 56, V).
