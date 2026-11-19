@@ -1,5 +1,9 @@
 # Histórico de versões
 
+## v11 – 19/11/2026
+- O mapa abre no **Mapa de ruas**, com "Nomes de cidades" desligado. O satélite e os nomes continuam no botão de camadas.
+- **Coordenada sem símbolos**, fácil de digitar no celular: `295344S 0535522W` (GGMMSS e GGGMMSS, também com decimais nos segundos), `2953S 05355W` (GGMM) ou só `295344 0535522` (nesse caso o verificador considera Sul e Oeste e avisa). O formato com ° ' " continua aceito.
+
 ## v10 – 19/11/2026
 - Inclui as mudanças da v9 (não publicada separadamente).
 - **Altura em pés ou metros:** ao lado do campo "Altura máxima" há um seletor pés (ft) / metros (m). O cálculo continua em pés, porque as tabelas da ICA 100-40 estão em ft (1 ft = 0,3048 m). Ao trocar a unidade, o número do campo é convertido, e a escolha fica lembrada neste navegador.

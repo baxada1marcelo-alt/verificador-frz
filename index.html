@@ -98,7 +98,7 @@
 <header>
   <h1>Verificador FRZ e Áreas Restritas – RS</h1>
   <span class="sub">Consulta rápida: o voo do drone entra em Zona de Restrição de Voo? Precisa de Termo de Coordenação?</span>
-  <span class="ver">v10 · 19/11/2026</span>
+  <span class="ver">v11 · 19/11/2026</span>
 </header>
 
 <main>
@@ -106,8 +106,8 @@
     <form class="card" id="f" autocomplete="off">
       <h2>Dados do voo</h2>
       <label for="coord">Coordenada do voo</label>
-      <input id="coord" placeholder="-29.7400, -53.6500  ou  29°44'24&quot;S 053°39'00&quot;W">
-      <div class="hint">Aceita decimal ou graus/minutos/segundos. Também pode clicar no mapa.</div>
+      <input id="coord" placeholder="-29.7400, -53.6500  ou  294424S 0533900W">
+      <div class="hint">Aceita decimal (-29.74, -53.65) ou graus/minutos/segundos sem símbolos: <b>294424S 0533900W</b> (também aceita com ° ' "). Também pode clicar no mapa.</div>
       <div class="err" id="errCoord"></div>
 
       <div class="row">
@@ -247,7 +247,8 @@ function parseCoord(txt){
   const dec = s.match(/^\s*(-?\d+(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d+(?:[.,]\d+)?)\s*$/);
   if(dec){
     const a = parseFloat(dec[1].replace(',','.')), b = parseFloat(dec[2].replace(',','.'));
-    return { lat: a, lon: b, assumido: false };
+    // números grandes (ex.: 295344 0535522) não são graus decimais: são GGMMSS juntos – tratados abaixo
+    if(Math.abs(a) <= 90 && Math.abs(b) <= 180) return { lat: a, lon: b, assumido: false };
   }
   const toks = s.replace(/[°º'’′"”″:]/g,' ').match(/[NSEWOL]|\d+(?:[.,]\d+)?/g);
   if(!toks) return null;
@@ -257,14 +258,26 @@ function parseCoord(txt){
     if(/[A-Z]/.test(t)){
       if(prefixo){ if(cur.nums.length || cur.h) grupos.push(cur); cur = { nums: [], h: t }; }
       else { cur.h = t; grupos.push(cur); cur = { nums: [], h: null }; }
-    } else cur.nums.push(parseFloat(t.replace(',','.')));
+    } else cur.nums.push(t);
   }
   if(cur.nums.length) grupos.push(cur);
+  // Formato "colado", fácil de digitar no celular: 295344S 0535522W  (GGMMSS / GGGMMSS, segundos podem ter decimais)
+  // também 2953S 05355W (GGMM / GGGMM). Cada número com 4 a 7 dígitos antes da vírgula é separado em graus, minutos e segundos.
+  const colado = t => { const m = t.match(/^(\d+)([.,]\d+)?$/); const n = m[1], fr = m[2] || '';
+    if(n.length === 6 || n.length === 7) return [n.slice(0, n.length-4), n.slice(-4,-2), n.slice(-2) + fr];
+    if(n.length === 4 || n.length === 5) return [n.slice(0, n.length-2), n.slice(-2) + fr];
+    return null; };
   let assumido = false;
+  if(grupos.length === 1 && !grupos[0].h && grupos[0].nums.length === 2 && colado(grupos[0].nums[0]) && colado(grupos[0].nums[1])){
+    const n = grupos[0].nums; grupos.splice(0,1,{nums:[n[0]],h:null},{nums:[n[1]],h:null});
+  }
+  for(const g of grupos){ if(g.nums.length === 1){ const c = colado(g.nums[0]); if(c) g.nums = c; } }
+  for(const g of grupos) g.nums = g.nums.map(t => parseFloat(String(t).replace(',','.')));
   if(grupos.length === 1 && grupos[0].nums.length === 6 && !grupos[0].h){
     const n = grupos[0].nums; grupos.splice(0,1,{nums:n.slice(0,3),h:'S'},{nums:n.slice(3),h:'W'}); assumido = true;
   }
   if(grupos.length !== 2) return null;
+  if(grupos.some(g => g.nums.slice(1).some(v => v >= 60))) return null; // minuto/segundo inválido
   const val = g => { const [d=0,m=0,sec=0] = g.nums; let v = d + m/60 + sec/3600; if(['S','W','O'].includes(g.h)) v = -v; return v; };
   let lat, lon;
   const g0 = grupos[0], g1 = grupos[1];
@@ -332,7 +345,7 @@ function analisePrazo({ perfilId, alt, raio, proibida, intersecao, talvez, inici
 function verificar(){
   $('errCoord').textContent = '';
   const c = parseCoord($('coord').value);
-  if(!c || !isFinite(c.lat) || !isFinite(c.lon)){ $('errCoord').textContent = 'Coordenada não reconhecida. Ex.: -29.74, -53.65'; return; }
+  if(!c || !isFinite(c.lat) || !isFinite(c.lon)){ $('errCoord').textContent = 'Coordenada não reconhecida. Ex.: -29.74, -53.65  ou  294424S 0533900W'; return; }
   if(c.lat < -34.5 || c.lat > -26.5 || c.lon < -58.5 || c.lon > -48.5){ $('errCoord').textContent = 'A coordenada está fora do Rio Grande do Sul. Confira os sinais (Sul e Oeste são negativos).'; return; }
   const alt = altEmFt();
   const raio = Math.max(0, parseFloat($('raio').value) || 0);
@@ -549,11 +562,11 @@ function atualizarFRZ(){
 function iniciarMapa(){
   mapa = L.map('lmap', { zoomControl: true }).setView(AERODROMOS[0].arp, 12);
   const sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 19, attribution: 'Imagens &copy; Esri, Maxar, Earthstar Geographics' }).addTo(mapa);
+    maxZoom: 19, attribution: 'Imagens &copy; Esri, Maxar, Earthstar Geographics' });
   const nomes = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 19, pane: 'shadowPane' }).addTo(mapa);
+    maxZoom: 19, pane: 'shadowPane' });
   const ruas = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19, attribution: '&copy; colaboradores do OpenStreetMap' });
+    maxZoom: 19, attribution: '&copy; colaboradores do OpenStreetMap' }).addTo(mapa); // padrão: mapa de ruas, sem "Nomes de cidades"
   // áreas proibidas/restritas/perigosas que podem afetar drones (limite inferior GND, AGL ou AMSL baixo)
   const areas = L.layerGroup().addTo(mapa);
   const estilo = { P: { color: '#a3221c', fillColor: '#a3221c', fillOpacity: .18, weight: 2 },
