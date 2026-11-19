@@ -92,3 +92,26 @@ for (const [id, alt, st] of casosE) {
   assert.ok(!f.avaliarEAC(lat, lon, 0, 100).some(x => x.a.id === 'SBP597'));
   assert.ok(f.avaliarEAC(lat, lon, 1500, 100).some(x => x.a.id === 'SBP597')); okE++; }
 console.log(`${okE}/${casosE.length + 1} testes de áreas P/R/D OK`);
+
+// ===== Área de voo em polígono =====
+let okP = 0;
+// área do polígono do print do SARPAS (19/11/2026): 1,08 km² (1.076.378 m²)
+const polySarpas = [[-29.6984212299, -53.6941550913], [-29.6984212299, -53.684156066], [-29.6884212146, -53.6841560663], [-29.6884212146, -53.6941550913]];
+assert.ok(Math.abs(f.areaPoligonoM2(polySarpas) - 1076378) < 1076378 * 0.005, 'área do polígono ≈ SARPAS'); okP++;
+// triângulo pequeno em volta do ponto (s=0, l=2000) da SBSM: setor B (piso 100 ft) – igual ao ponto
+const tri = [ponto(-20, 1990), ponto(20, 1990), ponto(0, 2020)];
+const sbsmP = alt => f.avaliar(0, 0, 0, alt, 'recreativa', tri).find(x => x.ad.id === 'SBSM');
+assert.strictEqual(sbsmP(100).status, 'fora'); assert.strictEqual(sbsmP(105).status, 'dentro'); assert.strictEqual(sbsmP(105).pior.setor, 'B'); okP++;
+// retângulo comprido que começa no setor G (4 km da cabeceira) e chega até 2 km: a parte mais crítica é o setor F
+const ret = [ponto(4000, -50), ponto(4000, 50), ponto(2000, 50), ponto(2000, -50)];
+assert.strictEqual(f.avaliar(0, 0, 0, 10, 'recreativa', ret).find(x => x.ad.id === 'SBSM').pior.setor, 'F'); okP++;
+// polígono que encosta só na borda de uma área circular (SBP597): o centro do polígono fica fora, mas o lado toca
+{ const a = area('SBP597'); const p = d => f.fromXY(a.circ.c[0], a.circ.c[1], 0, a.circ.r + d);
+  const toca = [f.fromXY(a.circ.c[0], a.circ.c[1], -300, a.circ.r - 50), f.fromXY(a.circ.c[0], a.circ.c[1], 300, a.circ.r - 50), p(2000)];
+  const longe = [p(500), f.fromXY(a.circ.c[0], a.circ.c[1], 300, a.circ.r + 800), p(1500)];
+  assert.ok(f.avaliarEAC(0, 0, 0, 100, toca).some(x => x.a.id === 'SBP597'), 'polígono que toca SBP597');
+  assert.ok(!f.avaliarEAC(0, 0, 0, 100, longe).some(x => x.a.id === 'SBP597'), 'polígono longe de SBP597'); okP++; }
+// polígono grande que contém uma área poligonal inteira (SBP505)
+{ const a = area('SBP505'); const [la, lo] = centro(a); const g = [f.fromXY(la, lo, -20000, -20000), f.fromXY(la, lo, 20000, -20000), f.fromXY(la, lo, 20000, 20000), f.fromXY(la, lo, -20000, 20000)];
+  assert.ok(f.avaliarEAC(0, 0, 0, 100, g).some(x => x.a.id === 'SBP505'), 'polígono que contém SBP505'); okP++; }
+console.log(`${okP}/5 testes de polígono OK`);

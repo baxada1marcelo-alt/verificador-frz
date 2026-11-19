@@ -166,18 +166,50 @@ function classificaXY(ad, x, y, col) {
   return melhor;
 }
 
+// ===== Área de voo em forma de polígono (como no SARPAS: "Formato → Polígono") =====
+// poligono = lista de vértices [[lat, lon], ...] (3 ou mais, na ordem do contorno)
+function centroPoligono(poly) {
+  return [poly.reduce((s, p) => s + p[0], 0) / poly.length, poly.reduce((s, p) => s + p[1], 0) / poly.length];
+}
+function areaPoligonoM2(poly) {
+  const [la, lo] = centroPoligono(poly); const P = poly.map(p => toXY(la, lo, p[0], p[1]));
+  let a = 0; for (let i = 0; i < P.length; i++) { const A = P[i], B = P[(i + 1) % P.length]; a += A[0] * B[1] - B[0] * A[1]; }
+  return Math.abs(a) / 2;
+}
+// Pontos de amostra do polígono no referencial (lat0, lon0): vértices, contorno a cada ≤ 5 m
+// (a parte mais crítica de uma área fica sempre no contorno) e uma grade no interior.
+function amostrasPoligono(lat0, lon0, poly) {
+  const P = poly.map(p => toXY(lat0, lon0, p[0], p[1]));
+  const pts = P.slice();
+  let per = 0; for (let i = 0; i < P.length; i++) { const A = P[i], B = P[(i + 1) % P.length]; per += Math.hypot(B[0] - A[0], B[1] - A[1]); }
+  const passo = Math.max(5, per / 4000);
+  for (let i = 0; i < P.length; i++) {
+    const A = P[i], B = P[(i + 1) % P.length]; const n = Math.ceil(Math.hypot(B[0] - A[0], B[1] - A[1]) / passo);
+    for (let k = 1; k < n; k++) pts.push([A[0] + (B[0] - A[0]) * k / n, A[1] + (B[1] - A[1]) * k / n]);
+  }
+  const xs = P.map(p => p[0]), ys = P.map(p => p[1]);
+  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+  const g = Math.max(10, Math.hypot(x1 - x0, y1 - y0) / 80);
+  for (let x = x0 + g / 2; x < x1; x += g) for (let y = y0 + g / 2; y < y1; y += g) if (dentroPoligono(x, y, P)) pts.push([x, y]);
+  return pts;
+}
+
 // Avalia operação: ponto central + raio (m) + altura (ft) + perfil
-function avaliar(lat, lon, raio, alturaFt, perfilId) {
+// Se "poligono" for informado, a área de voo é o polígono (lat/lon = centro do polígono; raio é ignorado).
+function avaliar(lat, lon, raio, alturaFt, perfilId, poligono) {
   const res = [];
+  const ehPoli = Array.isArray(poligono) && poligono.length >= 3;
+  if (ehPoli) { [lat, lon] = centroPoligono(poligono); raio = Math.max(...poligono.map(p => Math.hypot(...toXY(lat, lon, p[0], p[1])))); }
   for (const ad of SITIOS) {
     const [cx, cy] = toXY(ad.lat0, ad.lon0, lat, lon);
     const dARP = Math.hypot(cx, cy);
     if (dARP > (ad.tipo === 'HP' ? 8000 : 20000) + raio) continue;
     if (ad.incompleto) { res.push({ ad, dARP, incompleto: true, status: dARP < 8000 ? 'indef' : 'fora' }); continue; }
     const col = colunaDe(ad, perfilId);
-    // amostra o círculo da operação: centro + 2 anéis de 24 pontos
+    // círculo: centro + 2 anéis de 24 pontos; polígono: contorno + interior
     const pts = [[cx, cy]];
-    if (raio > 0) for (const rr of [raio, raio / 2]) for (let k = 0; k < 24; k++) {
+    if (ehPoli) pts.push(...amostrasPoligono(ad.lat0, ad.lon0, poligono));
+    else if (raio > 0) for (const rr of [raio, raio / 2]) for (let k = 0; k < 24; k++) {
       const a = k * Math.PI / 12; pts.push([cx + rr*Math.cos(a), cy + rr*Math.sin(a)]);
     }
     let pior = null, centro = null;
@@ -226,12 +258,41 @@ function distanciaEAC(a, lat, lon) {
   return m;
 }
 
+// Os segmentos AB e CD se cruzam?
+function cruza(A, B, C, D) {
+  const o = (p, q, r) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+  const d1 = o(C, D, A), d2 = o(C, D, B), d3 = o(A, B, C), d4 = o(A, B, D);
+  if (d1 !== d2 && d3 !== d4) return true;
+  const sobre = (p, q, r) => Math.min(p[0], q[0]) <= r[0] && r[0] <= Math.max(p[0], q[0]) && Math.min(p[1], q[1]) <= r[1] && r[1] <= Math.max(p[1], q[1]);
+  return (d1 === 0 && sobre(C, D, A)) || (d2 === 0 && sobre(C, D, B)) || (d3 === 0 && sobre(A, B, C)) || (d4 === 0 && sobre(A, B, D));
+}
+// Distância (m) entre a área de voo em polígono e a área: 0 = as duas se tocam (cálculo exato pelos lados)
+function distanciaEACPoligono(a, poly) {
+  const [la, lo] = poly[0]; const F = poly.map(p => toXY(la, lo, p[0], p[1]));
+  const lados = P => P.map((A, i) => [A, P[(i + 1) % P.length]]);
+  if (a.circ) {
+    const C = toXY(la, lo, a.circ.c[0], a.circ.c[1]);
+    if (dentroPoligono(C[0], C[1], F)) return 0;
+    return Math.max(0, Math.min(...lados(F).map(([A, B]) => distSeg(C[0], C[1], A[0], A[1], B[0], B[1]))) - a.circ.r);
+  }
+  const E = a.poly.map(p => toXY(la, lo, p[0], p[1]));
+  if (F.some(p => dentroPoligono(p[0], p[1], E)) || E.some(p => dentroPoligono(p[0], p[1], F))) return 0;
+  const lF = lados(F), lE = lados(E);
+  for (const [A, B] of lF) for (const [C, D] of lE) if (cruza(A, B, C, D)) return 0;
+  let m = Infinity;
+  for (const p of F) for (const [C, D] of lE) m = Math.min(m, distSeg(p[0], p[1], C[0], C[1], D[0], D[1]));
+  for (const p of E) for (const [A, B] of lF) m = Math.min(m, distSeg(p[0], p[1], A[0], A[1], B[0], B[1]));
+  return m;
+}
+
 // Retorna as áreas que tocam a operação: { a, status: 'proibida'|'dentro'|'perigosa'|'indef', motivo }
-function avaliarEAC(lat, lon, raio, alturaFt) {
+// Se "poligono" for informado, a área de voo é o polígono (lat, lon e raio são ignorados).
+function avaliarEAC(lat, lon, raio, alturaFt, poligono) {
   const res = [];
+  const ehPoli = Array.isArray(poligono) && poligono.length >= 3;
   for (const a of EAC_LISTA) {
-    const d = distanciaEAC(a, lat, lon);
-    if (d > raio) continue;                                 // não toca a área lateralmente
+    const d = ehPoli ? distanciaEACPoligono(a, poligono) : distanciaEAC(a, lat, lon);
+    if (d > (ehPoli ? 0 : raio)) continue;                  // não toca a área lateralmente
     const inf = a.inf;
     let vertical; // 'sim' | 'nao' | 'talvez'
     if (inf.ref === 'GND') vertical = 'sim';
@@ -248,4 +309,4 @@ function avaliarEAC(lat, lon, raio, alturaFt) {
   return res.sort((x, y) => ordem[x.status] - ordem[y.status]);
 }
 
-if (typeof module !== 'undefined') module.exports = { AERODROMOS, HELIPONTOS, SITIOS, PERFIS, EAC: EAC_LISTA, avaliar, avaliarEAC, classificaXY, colunaDe, toXY, fromXY, dms };
+if (typeof module !== 'undefined') module.exports = { AERODROMOS, HELIPONTOS, SITIOS, PERFIS, EAC: EAC_LISTA, avaliar, avaliarEAC, classificaXY, colunaDe, toXY, fromXY, dms, centroPoligono, areaPoligonoM2 };

@@ -64,6 +64,15 @@
   canvas{width:100%;height:auto;display:block;border-radius:6px;border:1px solid var(--line);background:#efece5;cursor:crosshair}
   .maptools{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap;font-size:13px}
   .maptools select{width:auto;padding:5px 8px}
+  .formato{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px}
+  .formato button{padding:9px;border:1px solid #bfb9ad;border-radius:6px;background:#fff;color:var(--ink);font-weight:500}
+  .formato button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+  textarea{width:100%;padding:9px 10px;border:1px solid #bfb9ad;border-radius:6px;font:13px "IBM Plex Mono",monospace;background:#fff;color:var(--ink);resize:vertical}
+  .polibtns{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .polibtns .mini{flex:1}
+  .poliinfo{font-size:13px;margin-top:6px;padding:6px 10px;border-left:3px solid var(--accent);background:#eef3f8;border-radius:0 6px 6px 0}
+  .vtx{background:#14304f;color:#fff;border:0;font:600 11px "IBM Plex Mono",monospace;padding:0 5px;box-shadow:none}
+  .vtx::before{display:none}
   .altbox{display:flex;gap:6px}
   .altbox input{flex:1;min-width:0}
   .altbox select{width:auto;flex:none;padding:9px 6px}
@@ -102,17 +111,36 @@
 <header>
   <h1>Verificador FRZ e Áreas Restritas – RS</h1>
   <span class="sub">Consulta rápida: o voo do drone entra em Zona de Restrição de Voo? Precisa de Termo de Coordenação?</span>
-  <span class="ver">v12 · 19/11/2026</span>
+  <span class="ver">v13 · 19/11/2026</span>
 </header>
 
 <main>
   <section>
     <form class="card" id="f" autocomplete="off">
       <h2>Dados do voo</h2>
+      <label style="margin-top:0">Formato da área do voo</label>
+      <div class="formato" role="radiogroup">
+        <button type="button" id="fmtCirc" class="on" aria-pressed="true">◯ Círculo</button>
+        <button type="button" id="fmtPoli" aria-pressed="false">⬠ Polígono</button>
+      </div>
+      <div id="blocoCirc">
       <label for="coord">Coordenada do voo</label>
       <input id="coord" placeholder="-29.7400, -53.6500  ou  294424S 0533900W">
       <div class="hint">Aceita decimal (-29.74, -53.65) ou graus/minutos/segundos sem símbolos: <b>294424S 0533900W</b> (também aceita com ° ' "). Também pode clicar no mapa.</div>
       <div class="err" id="errCoord"></div>
+      </div>
+
+      <div id="blocoPoli" style="display:none">
+        <label for="vertices">Pontos do polígono <span style="font-weight:400;color:var(--muted)">(um por linha, na ordem do contorno)</span></label>
+        <textarea id="vertices" rows="5" placeholder="294209S 0534209W&#10;294209S 0534100W&#10;294130S 0534100W&#10;ou clique no mapa para marcar"></textarea>
+        <div class="hint"><b>Clique no mapa</b> para marcar cada ponto (1, 2, 3…), ou digite as coordenadas (mesmos formatos do círculo). Mínimo 3 pontos; o último liga no primeiro.</div>
+        <div class="polibtns">
+          <button type="button" class="mini" id="vDesfazer">Desfazer último ponto</button>
+          <button type="button" class="mini" id="vApagar">Apagar pontos</button>
+        </div>
+        <div class="poliinfo" id="poliInfo">Nenhum ponto marcado.</div>
+        <div class="err" id="errPoli"></div>
+      </div>
 
       <div class="row">
         <div>
@@ -123,7 +151,7 @@
           </div>
           <div class="hint" id="altm">≈ 61 m acima do solo</div>
         </div>
-        <div>
+        <div id="blocoRaio">
           <label for="raio">Raio da área (m)</label>
           <input id="raio" type="number" min="0" step="any" value="0">
           <div class="hint">0 = só o ponto</div>
@@ -227,8 +255,8 @@
   </section>
 </main>
 
-<script src="eac-rs.js?v=12"></script>
-<script src="frz.js?v=12"></script>
+<script src="eac-rs.js?v=13"></script>
+<script src="frz.js?v=13"></script>
 <script>
 const $ = id => document.getElementById(id);
 const COR = ['#b3261e','#e5483f','#f08c2a','#f2d03b','#8ccbe8'];
@@ -314,8 +342,7 @@ function explicar(r, alt){
 // ===== Prazo de antecedência para pedir no SARPAS (ICA 100-40, Arts. 56 e 57) =====
 // Considera UA com PMD até 25 kg e operação VLOS (casos acima disso pedem 8 dias – Art. 57, III).
 const DIA = 1440; // minutos
-function prazoMinimo(perfilId, alt, raio, intersecao){
-  const areaKm2 = Math.PI * raio * raio / 1e6;
+function prazoMinimo(perfilId, alt, areaKm2, intersecao){
   if(perfilId === 'especial') return { min: 30, txt: '30 minutos', base: 'Art. 57, I, "d" – Operação Aérea Especial' };
   if(perfilId === 'atipica') return { min: 8*DIA, txt: '8 dias corridos', base: 'Art. 57, III, "b" – operação Atípica' };
   if(alt > 400) return { min: 8*DIA, txt: '8 dias corridos', base: 'Art. 57, III, "a", 3 – acima de 400 pés' };
@@ -328,12 +355,12 @@ function fmtDuracao(min){
   const m = Math.abs(Math.round(min)), d = Math.floor(m / DIA), h = Math.floor((m % DIA) / 60), mm = m % 60;
   return [d ? d + (d > 1 ? ' dias' : ' dia') : '', h ? h + ' h' : '', (!d && mm) ? mm + ' min' : ''].filter(Boolean).join(' ') || '0 min';
 }
-function analisePrazo({ perfilId, alt, raio, proibida, intersecao, talvez, inicio }){
+function analisePrazo({ perfilId, alt, areaKm2, proibida, intersecao, talvez, inicio }){
   if(proibida) return { cls: 'nao', titulo: 'SARPAS: a solicitação não será aceita', txt: 'Interseção com área proibida (ICA 100-40, Art. 56, V).' };
-  let p = prazoMinimo(perfilId, alt, raio, intersecao);
+  let p = prazoMinimo(perfilId, alt, areaKm2, intersecao);
   let txt = `Antecedência mínima para pedir no SARPAS: <b>${p.txt}</b> antes do início do voo (ICA 100-40, ${p.base}).`;
   if(!intersecao && talvez && p.min < 4*DIA){
-    const p4 = prazoMinimo(perfilId, alt, raio, true);
+    const p4 = prazoMinimo(perfilId, alt, areaKm2, true);
     txt += ` Se o SARPAS confirmar a interseção que ficou indefinida acima, o prazo passa a <b>${p4.txt}</b> (${p4.base}).`;
     p = p4; // para a conferência da data, usa o caso mais exigente
   }
@@ -346,18 +373,76 @@ function analisePrazo({ perfilId, alt, raio, proibida, intersecao, talvez, inici
   return { cls: 'ok', titulo: 'Prazo de antecedência OK', txt: `O voo começa daqui a ${fmtDuracao(falta)}. ${txt}` };
 }
 
-function verificar(){
-  $('errCoord').textContent = '';
-  const c = parseCoord($('coord').value);
-  if(!c || !isFinite(c.lat) || !isFinite(c.lon)){ $('errCoord').textContent = 'Coordenada não reconhecida. Ex.: -29.74, -53.65  ou  294424S 0533900W'; return; }
-  if(c.lat < -34.5 || c.lat > -26.5 || c.lon < -58.5 || c.lon > -48.5){ $('errCoord').textContent = 'A coordenada está fora do Rio Grande do Sul. Confira os sinais (Sul e Oeste são negativos).'; return; }
-  const alt = altEmFt();
-  const raio = Math.max(0, parseFloat($('raio').value) || 0);
-  const perfilId = $('perfil').value;
-  estado.lat = c.lat; estado.lon = c.lon; estado.centro = [c.lat, c.lon];
-  const res = avaliar(c.lat, c.lon, raio, alt, perfilId);
+// ===== Formato da área: Círculo (ponto + raio) ou Polígono (vários pontos) =====
+let formato = 'circ';
+const dentroRS = (lat, lon) => !(lat < -34.5 || lat > -26.5 || lon < -58.5 || lon > -48.5);
+// Lê os pontos do polígono (um por linha). Retorna { pts, erro, assumido }
+function lerVertices(){
+  const linhas = $('vertices').value.split(/\n/).map(l => l.trim()).filter(Boolean);
+  const pts = []; let assumido = false;
+  for(let i = 0; i < linhas.length; i++){
+    const c = parseCoord(linhas[i]);
+    if(!c || !isFinite(c.lat) || !isFinite(c.lon)) return { pts, erro: `Ponto ${i+1} não reconhecido: "${linhas[i]}". Ex.: 294424S 0533900W` };
+    if(!dentroRS(c.lat, c.lon)) return { pts, erro: `Ponto ${i+1} está fora do Rio Grande do Sul. Confira os sinais (Sul e Oeste são negativos).` };
+    if(c.assumido) assumido = true;
+    pts.push([c.lat, c.lon]);
+  }
+  return { pts, erro: null, assumido };
+}
+function infoPoligono(){
+  const { pts, erro } = lerVertices();
+  $('errPoli').textContent = erro || '';
+  if(!pts.length) { $('poliInfo').textContent = 'Nenhum ponto marcado.'; return; }
+  if(pts.length < 3) { $('poliInfo').textContent = `${pts.length} ponto${pts.length>1?'s':''} – faltam ${3-pts.length} para fechar o polígono.`; return; }
+  const a = areaPoligonoM2(pts);
+  $('poliInfo').innerHTML = `${pts.length} pontos · área <b>${a >= 1e4 ? (a/1e6).toLocaleString('pt-BR',{maximumFractionDigits:2}) + ' km²' : fmtN(a) + ' m²'}</b> (${fmtN(a)} m²)`;
+}
+function escolherFormato(f){
+  formato = f;
+  $('fmtCirc').classList.toggle('on', f === 'circ'); $('fmtCirc').setAttribute('aria-pressed', f === 'circ');
+  $('fmtPoli').classList.toggle('on', f === 'poli'); $('fmtPoli').setAttribute('aria-pressed', f === 'poli');
+  $('blocoCirc').style.display = f === 'circ' ? '' : 'none';
+  $('blocoRaio').style.display = f === 'circ' ? '' : 'none';
+  $('blocoPoli').style.display = f === 'poli' ? '' : 'none';
+  estado.lat = null; estado.lon = null; estado.poli = null;
+  $('out').innerHTML = f === 'poli'
+    ? '<div class="empty">Marque os pontos do polígono clicando no mapa (ou digite as coordenadas) e clique em <b>Verificar</b>.</div>'
+    : '<div class="empty">Informe a coordenada e clique em <b>Verificar</b>, ou clique no mapa.</div>';
+  if(f === 'poli') infoPoligono();
+  desenhar();
+}
+function adicionarVertice(lat, lon){
+  const t = $('vertices').value.replace(/\s+$/,'');
+  $('vertices').value = (t ? t + '\n' : '') + lat.toFixed(6) + ', ' + lon.toFixed(6);
+  infoPoligono();
+  if(lerVertices().pts.length >= 3) verificar(); else { estado.lat = null; desenhar(); }
+}
 
-  const eacTodas = avaliarEAC(c.lat, c.lon, raio, alt);
+function verificar(){
+  $('errCoord').textContent = ''; $('errPoli').textContent = '';
+  let c, raio, poli = null, areaKm2;
+  if(formato === 'poli'){
+    const v = lerVertices();
+    if(v.erro){ $('errPoli').textContent = v.erro; return; }
+    if(v.pts.length < 3){ $('errPoli').textContent = 'Marque pelo menos 3 pontos para formar o polígono.'; return; }
+    poli = v.pts;
+    const [la, lo] = centroPoligono(poli);
+    c = { lat: la, lon: lo, assumido: v.assumido };
+    raio = Math.max(...poli.map(p => Math.hypot(...toXY(la, lo, p[0], p[1])))); // maior distância do centro a um ponto
+    areaKm2 = areaPoligonoM2(poli) / 1e6;
+  } else {
+    c = parseCoord($('coord').value);
+    if(!c || !isFinite(c.lat) || !isFinite(c.lon)){ $('errCoord').textContent = 'Coordenada não reconhecida. Ex.: -29.74, -53.65  ou  294424S 0533900W'; return; }
+    if(!dentroRS(c.lat, c.lon)){ $('errCoord').textContent = 'A coordenada está fora do Rio Grande do Sul. Confira os sinais (Sul e Oeste são negativos).'; return; }
+    raio = Math.max(0, parseFloat($('raio').value) || 0);
+    areaKm2 = Math.PI * raio * raio / 1e6;
+  }
+  const alt = altEmFt();
+  const perfilId = $('perfil').value;
+  estado.lat = c.lat; estado.lon = c.lon; estado.centro = [c.lat, c.lon]; estado.poli = poli;
+  const res = avaliar(c.lat, c.lon, raio, alt, perfilId, poli);
+
+  const eacTodas = avaliarEAC(c.lat, c.lon, raio, alt, poli);
   const eac = eacTodas.filter(e => areaLigada(e.a));
   const eacDesligadas = eacTodas.filter(e => !areaLigada(e.a));
   const eP = eac.filter(e => e.status === 'proibida'), eR = eac.filter(e => e.status === 'dentro');
@@ -391,14 +476,14 @@ function verificar(){
     const tipo = {P:'Área proibida', R:'Área restrita', D:'Área perigosa'}[e.a.tipo];
     const tag = {proibida:['dentro','Proibida'], dentro:['dentro','TCo'], perigosa:['indef','Perigosa'], indef:['indef','Confirmar']}[e.status];
     const conc = {proibida:'Operação vedada (Art. 29, I).', dentro:'Termo de Coordenação obrigatório (Art. 29, II).', perigosa:'Termo de Coordenação dispensado; cabe ao piloto decidir se aceita os riscos (Art. 29, III e parágrafo único).', indef:'Depende da altitude do terreno (limite em AMSL).'}[e.status];
-    return `<tr><td><b>${e.a.id}</b><br><span class="hint">${tipo}</span></td><td class="num">${e.dist===0?'dentro':fmtN(e.dist)+' m'}</td><td>${e.a.inf.txt} até ${e.a.sup.txt}</td><td style="font-size:13px"><b>${e.a.nome}</b>. ${conc}<br><span class="hint">${e.a.rmk}</span></td><td><span class="tag ${tag[0]}">${tag[1]}</span></td></tr>`;
+    return `<tr><td><b>${e.a.id}</b><br><span class="hint">${tipo}</span></td><td class="num">${e.dist===0?(poli?'toca':'dentro'):fmtN(e.dist)+' m'}</td><td>${e.a.inf.txt} até ${e.a.sup.txt}</td><td style="font-size:13px"><b>${e.a.nome}</b>. ${conc}<br><span class="hint">${e.a.rmk}</span></td><td><span class="tag ${tag[0]}">${tag[1]}</span></td></tr>`;
   }).join('');
 
   const warns = [];
   if(alt > 400) warns.push('Acima de 400 ft (120 m): a operação só é feita com segregação do espaço aéreo, divulgada por produto AIS (ICA 100-40, Art. 25, II).');
   if(perfilId === 'recreativa'){
     if(alt > 200) warns.push('Operação recreativa: altura máxima de 200 ft (60 m) acima do solo (ICA 100-40, Art. 32, I).');
-    if(raio > 300) warns.push('Operação recreativa: distância horizontal máxima de 300 m (ICA 100-40, Art. 32, II).');
+    if(raio > 300) warns.push(poli ? 'Operação recreativa: distância horizontal máxima de 300 m (ICA 100-40, Art. 32, II). Há ponto do polígono a mais de 300 m do centro da área – confira a distância até o piloto.' : 'Operação recreativa: distância horizontal máxima de 300 m (ICA 100-40, Art. 32, II).');
   }
   if(perfilId === 'estrutura'){
     if(res.some(r => r.ad.tipo === 'AD' && !r.incompleto && r.status !== 'fora')) warns.push('Operação no entorno de estrutura perto de aeroporto: "manter-se afastado, no mínimo, 500 metros" (ICA 100-40, Fig. 2, nota 4).');
@@ -417,14 +502,14 @@ function verificar(){
   }).join('');
 
   const gm = `https://www.google.com/maps?q=${c.lat.toFixed(6)},${c.lon.toFixed(6)}`;
-  const pz = analisePrazo({ perfilId, alt, raio, proibida: eP.length > 0,
+  const pz = analisePrazo({ perfilId, alt, areaKm2, proibida: eP.length > 0,
     intersecao: dentro.length > 0 || eR.length > 0, talvez: indef.length > 0 || eI.length > 0, inicio: $('inicio').value });
   $('out').innerHTML = `
     <div class="verdict ${cls}"><div class="big">${big}</div><div class="txt">${txt}</div></div>
     <div class="prazo ${pz.cls}"><b>${pz.titulo}</b><br>${pz.txt}</div>
     ${warns.length ? '<ul class="warns">'+warns.map(w=>'<li>'+w+'</li>').join('')+'</ul>' : ''}
-    <div style="font-size:13px;margin-bottom:8px">Ponto: <span class="mono">${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}</span> · <span class="mono">${dmsTxt(c.lat,'N','S')} ${dmsTxt(c.lon,'E','W')}</span> · ${unidadeAlt()==='m' ? altTxt(alt) : alt+' ft ('+fmtN(ftToM(alt))+' m)'} · raio ${fmtN(raio)} m · ${PERFIS[perfilId].nome} · <a class="gm" href="${gm}" target="_blank" rel="noopener">ver no Google Maps</a></div>
-    ${res.length ? `<table><thead><tr><th>Local</th><th>Distância</th><th>Zona</th><th>Explicação</th><th></th></tr></thead><tbody>${linhas}</tbody></table>` : ''}
+    <div style="font-size:13px;margin-bottom:8px">${poli ? `Polígono de <b>${poli.length} pontos</b>, área ${areaKm2.toLocaleString('pt-BR',{maximumFractionDigits:2})+' km² ('+fmtN(areaKm2*1e6)+' m²)'} · centro: ` : 'Ponto: '}<span class="mono">${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}</span> · <span class="mono">${dmsTxt(c.lat,'N','S')} ${dmsTxt(c.lon,'E','W')}</span> · ${unidadeAlt()==='m' ? altTxt(alt) : alt+' ft ('+fmtN(ftToM(alt))+' m)'}${poli ? '' : ' · raio ' + fmtN(raio) + ' m'} · ${PERFIS[perfilId].nome} · <a class="gm" href="${gm}" target="_blank" rel="noopener">ver no Google Maps</a></div>
+    ${res.length ? `<table><thead><tr><th>Local</th><th>${poli ? 'Distância (centro)' : 'Distância'}</th><th>Zona</th><th>Explicação</th><th></th></tr></thead><tbody>${linhas}</tbody></table>` : ''}
     ${eac.length ? `<h2 style="margin:16px 0 6px">Áreas proibidas, restritas e perigosas (AIP ENR 5.1)</h2><table><thead><tr><th>Área</th><th>Distância</th><th>Limites</th><th>Explicação</th><th></th></tr></thead><tbody>${linhasE}</tbody></table>` : ''}
     <div class="hint" style="margin-top:10px">Orientação prévia. A confirmação oficial é feita no SARPAS ao cadastrar o voo.</div>`;
   desenhar();
@@ -606,6 +691,7 @@ function iniciarMapa(){
   atualizarFRZ();
 
   mapa.on('click', e => {
+    if(formato === 'poli') return adicionarVertice(e.latlng.lat, e.latlng.lng);
     $('coord').value = e.latlng.lat.toFixed(5) + ', ' + e.latlng.lng.toFixed(5);
     verificar();
   });
@@ -615,6 +701,14 @@ function iniciarMapa(){
 // Marca o ponto do voo e o raio da área no mapa de satélite
 function desenharOperacao(){
   camadaOp.clearLayers();
+  if(formato === 'poli'){
+    const pts = lerVertices().pts; if(!pts.length) return;
+    if(pts.length >= 3) L.polygon(pts, { color: '#fff', weight: 3, fillColor: '#14304f', fillOpacity: .18, interactive: false }).addTo(camadaOp);
+    else if(pts.length === 2) L.polyline(pts, { color: '#fff', weight: 3, dashArray: '6 4', interactive: false }).addTo(camadaOp);
+    pts.forEach((p, i) => L.circleMarker(p, { radius: 5, color: '#14304f', weight: 2, fillColor: '#fff', fillOpacity: 1, interactive: false })
+      .bindTooltip(String(i + 1), { permanent: true, direction: 'right', className: 'vtx', offset: [5, 0] }).addTo(camadaOp));
+    return;
+  }
   if(estado.lat === null) return;
   const p = [estado.lat, estado.lon];
   const raio = Math.max(0, parseFloat($('raio').value)||0);
@@ -673,7 +767,11 @@ function desenharCanvas(){
     }
   }
   // operação
-  if(estado.lat !== null){
+  if(formato === 'poli'){
+    const pts = lerVertices().pts.map(p => toPx(p[0], p[1]));
+    if(pts.length){ ctx.strokeStyle='#14304f'; ctx.lineWidth=2; ctx.fillStyle='rgba(20,48,79,.18)'; ctx.beginPath(); pts.forEach((q,i)=> i ? ctx.lineTo(...q) : ctx.moveTo(...q)); if(pts.length>=3){ ctx.closePath(); ctx.fill(); } ctx.stroke();
+      ctx.font='600 11px IBM Plex Mono, monospace'; pts.forEach((q,i)=>{ ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(q[0],q[1],4,0,7); ctx.fill(); ctx.stroke(); ctx.fillStyle='#14304f'; ctx.fillText(String(i+1), q[0]+6, q[1]-6); }); }
+  } else if(estado.lat !== null){
     const [px, py] = toPx(estado.lat, estado.lon);
     const raio = Math.max(0, parseFloat($('raio').value)||0);
     if(raio>0){ ctx.strokeStyle='#14304f'; ctx.lineWidth=2; ctx.setLineDash([6,4]); ctx.beginPath(); ctx.arc(px,py,raio/mpp,0,7); ctx.stroke(); ctx.setLineDash([]); }
@@ -695,15 +793,17 @@ $('map').addEventListener('click', ev => {
   const meia = parseFloat($('escala').value), mpp = (2*meia)/cv.width;
   const [lat0, lon0] = estado.centro || AERODROMOS[0].arp;
   const [lat, lon] = fromXY(lat0, lon0, (i - cv.width/2)*mpp, (cv.height/2 - j)*mpp);
+  const keep = estado.centro;
+  if(formato === 'poli'){ adicionarVertice(lat, lon); estado.centro = keep || estado.centro; desenhar(); return; }
   $('coord').value = lat.toFixed(5) + ', ' + lon.toFixed(5);
-  const keep = estado.centro; verificar(); estado.centro = keep || estado.centro; desenhar();
+  verificar(); estado.centro = keep || estado.centro; desenhar();
 });
 
 // Limpar dados: volta todos os campos ao início, apaga o resultado e o ponto do mapa
 $('eacFonte').textContent = 'fonte: ' + EAC_FONTE;
 montarFiltro();
 $('limpar').addEventListener('click', () => {
-  $('coord').value = '';
+  $('coord').value = ''; $('vertices').value = ''; $('errPoli').textContent = ''; estado.poli = null;
   $('alt').value = unidadeAlt() === 'm' ? 60 : 200; dicaAlt();
   $('raio').value = 0;
   $('inicio').value = '';
@@ -713,14 +813,25 @@ $('limpar').addEventListener('click', () => {
   $('out').innerHTML = '<div class="empty">Informe a coordenada e clique em <b>Verificar</b>, ou clique no mapa.</div>';
   estado.lat = null; estado.lon = null;
   if(mapa && mudouPerfil) atualizarFRZ();
-  desenhar();
-  $('coord').focus();
+  if(formato === 'poli'){ escolherFormato('poli'); } else { desenhar(); $('coord').focus(); }
 });
 
 $('f').addEventListener('submit', ev => {
   ev.preventDefault(); verificar();
-  if(mapa && estado.lat !== null){ const p = L.latLng(estado.lat, estado.lon); if(!mapa.getBounds().contains(p)) mapa.setView(p, Math.max(mapa.getZoom(), 13)); }
+  if(mapa && estado.lat !== null){
+    if(estado.poli){ const b = L.latLngBounds(estado.poli); if(!mapa.getBounds().contains(b)) mapa.fitBounds(b, { maxZoom: 15, padding: [30, 30] }); }
+    else { const p = L.latLng(estado.lat, estado.lon); if(!mapa.getBounds().contains(p)) mapa.setView(p, Math.max(mapa.getZoom(), 13)); }
+  }
 });
+$('fmtCirc').addEventListener('click', () => escolherFormato('circ'));
+$('fmtPoli').addEventListener('click', () => escolherFormato('poli'));
+$('vertices').addEventListener('input', () => { infoPoligono(); estado.lat = null; desenhar(); });
+$('vDesfazer').addEventListener('click', () => {
+  const l = $('vertices').value.split(/\n/).map(x => x.trim()).filter(Boolean); l.pop();
+  $('vertices').value = l.join('\n'); infoPoligono();
+  if(lerVertices().pts.length >= 3) verificar(); else { estado.lat = null; estado.poli = null; desenhar(); }
+});
+$('vApagar').addEventListener('click', () => { $('vertices').value = ''; escolherFormato('poli'); });
 $('escala').addEventListener('change', desenhar);
 $('perfil').addEventListener('change', () => { if(mapa) atualizarFRZ(); if(estado.lat!==null) verificar(); else desenhar(); });
 $('alt').addEventListener('input', dicaAlt);

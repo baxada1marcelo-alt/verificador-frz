@@ -1,5 +1,13 @@
 # Histórico de versões
 
+## v13 – 19/11/2026
+- **Área do voo em polígono**, como no SARPAS ("Formato → Polígono"). No topo do formulário há a escolha **Círculo** (ponto + raio, como antes) ou **Polígono**.
+- No polígono, cada clique no mapa marca um ponto (1, 2, 3…). Também dá para digitar as coordenadas, uma por linha, nos mesmos formatos do círculo. Há botões "Desfazer último ponto" e "Apagar pontos". A página mostra a área em m² e km².
+- Cálculo das FRZ no polígono: considera o contorno inteiro (pontos a cada 5 m ou menos) e o interior, e usa a parte mais crítica, como já era feito no círculo.
+- Áreas P/R/D no polígono: a interseção é calculada pelos lados do polígono, então um polígono que só encosta na área também conta.
+- Prazo de antecedência: a regra de "área maior que 100 km²" (Art. 57, II, "c") usa a área do polígono.
+- Área conferida com o print do SARPAS de 19/11/2026: o verificador dá 1.073.966 m² e o SARPAS 1.076.378 m² (1,08 km²). A diferença de 0,2% vem do modelo da Terra usado no cálculo e não muda a regra dos 100 km².
+
 ## v12 – 19/11/2026
 - O Sgt Marcelo abriu a v11 e ainda viu o satélite e os nomes de cidades. O site publicado estava certo; o navegador tinha mostrado uma cópia antiga guardada (cache).
 - A página agora pede ao navegador para não guardar cópia antiga, e os arquivos frz.js e eac-rs.js levam o número da versão no endereço (?v=12). Assim, cada versão nova é baixada de novo.
