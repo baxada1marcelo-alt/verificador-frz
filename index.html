@@ -3,6 +3,10 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- pede ao navegador para sempre buscar a versão nova da página (evita abrir versão antiga guardada) -->
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Verificador FRZ – Drones RS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -98,7 +102,7 @@
 <header>
   <h1>Verificador FRZ e Áreas Restritas – RS</h1>
   <span class="sub">Consulta rápida: o voo do drone entra em Zona de Restrição de Voo? Precisa de Termo de Coordenação?</span>
-  <span class="ver">v11 · 19/11/2026</span>
+  <span class="ver">v12 · 19/11/2026</span>
 </header>
 
 <main>
@@ -223,8 +227,8 @@
   </section>
 </main>
 
-<script src="eac-rs.js"></script>
-<script src="frz.js"></script>
+<script src="eac-rs.js?v=12"></script>
+<script src="frz.js?v=12"></script>
 <script>
 const $ = id => document.getElementById(id);
 const COR = ['#b3261e','#e5483f','#f08c2a','#f2d03b','#8ccbe8'];

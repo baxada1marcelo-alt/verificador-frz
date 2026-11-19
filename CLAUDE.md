@@ -34,7 +34,7 @@ Contexto para o Claude Code trabalhar neste projeto.
 - **Não inventar.** Toda regra deve vir da legislação (ICA 100-40/2026, RBAC-E 94, RBAC 100, Resolução ANAC 806/2026) ou de fonte oficial (AISWEB/DECEA). Se houver dúvida, perguntar ao Marcelo e avisar que não há certeza.
 - Linguagem simples nas mensagens da página; citar artigo da norma.
 - Ao mudar a lógica, rodar os testes e atualizar `CHANGELOG.md`.
-- Versionar: subir a versão (v2 → v3…) no cabeçalho do `index.html` e no CHANGELOG, com data.
+- Versionar: subir a versão (v2 → v3…) no cabeçalho do `index.html` e no CHANGELOG, com data. Trocar também o `?v=` dos `<script src="frz.js?v=…">` e `eac-rs.js?v=…` (evita o navegador usar cópia antiga).
 
 ## Pendências
 1. ~~Validar a regra da altura no SARPAS~~ – feito na v8 (19/11/2026): no piso exato não entra; acima entra. Observação: no teste a 105 ft o SARPAS listou **2 conflitos SBSM (61 m/200 ft)** – o Marcelo confirmou que o SARPAS ainda considera a RWY 02/20 – por decisão dele, o verificador continua sem ela.

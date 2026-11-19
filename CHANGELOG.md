@@ -1,5 +1,9 @@
 # Histórico de versões
 
+## v12 – 19/11/2026
+- O Sgt Marcelo abriu a v11 e ainda viu o satélite e os nomes de cidades. O site publicado estava certo; o navegador tinha mostrado uma cópia antiga guardada (cache).
+- A página agora pede ao navegador para não guardar cópia antiga, e os arquivos frz.js e eac-rs.js levam o número da versão no endereço (?v=12). Assim, cada versão nova é baixada de novo.
+
 ## v11 – 19/11/2026
 - O mapa abre no **Mapa de ruas**, com "Nomes de cidades" desligado. O satélite e os nomes continuam no botão de camadas.
 - **Coordenada sem símbolos**, fácil de digitar no celular: `295344S 0535522W` (GGMMSS e GGGMMSS, também com decimais nos segundos), `2953S 05355W` (GGMM) ou só `295344 0535522` (nesse caso o verificador considera Sul e Oeste e avisa). O formato com ° ' " continua aceito.
