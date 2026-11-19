@@ -26,7 +26,7 @@ Contexto para o Claude Code trabalhar neste projeto.
 - Áreas P/R/D com limite inferior em AGL: por segurança continua "≥" (não conferido no SARPAS).
 - Último anel (E/J): FRZ a partir de 400 ft; até 400 ft não entra; acima → "confirmar no SARPAS" (limite externo não definido).
 - Área com raio: amostra centro + 2 anéis de 24 pontos e usa o pior caso.
-- SBSM RWY 02/20 está fechada (SUP N0057, até 26/04/2029) → não considerar enquanto fechada.
+- SBSM RWY 02/20 está fechada (SUP N0057, até 26/04/2029) → não considerar enquanto fechada. **Decisão do Marcelo (19/11/2026):** o SARPAS ainda leva a 02/20 em conta, mas o verificador NÃO deve considerar; a página só avisa que o SARPAS pode mostrar conflito a mais.
 - SJRG: cabeceiras não publicadas → resultado "indefinido".
 - **Prazo de antecedência** (Arts. 56 e 57): 30 min sem FRZ/área restrita; 4 dias com interseção (ou aerolevantamento, ou área > 100 km²); 8 dias acima de 400 ft ou Atípica; Aérea Especial 30 min. Considera UA ≤ 25 kg e VLOS. Conferido com print do SARPAS em 19/11/2026 (SDWY, 390 ft: SARPAS "Não aceito – prazo insuficiente").
 
@@ -37,7 +37,7 @@ Contexto para o Claude Code trabalhar neste projeto.
 - Versionar: subir a versão (v2 → v3…) no cabeçalho do `index.html` e no CHANGELOG, com data.
 
 ## Pendências
-1. ~~Validar a regra da altura no SARPAS~~ – feito na v8 (19/11/2026): no piso exato não entra; acima entra. Observação: no teste a 105 ft o SARPAS listou **2 conflitos SBSM (61 m/200 ft)** – pode ser ZEA + ZAD ou a RWY 02/20 (fechada por SUP); se aparecer diferença perto da 02/20, conferir.
+1. ~~Validar a regra da altura no SARPAS~~ – feito na v8 (19/11/2026): no piso exato não entra; acima entra. Observação: no teste a 105 ft o SARPAS listou **2 conflitos SBSM (61 m/200 ft)** – o Marcelo confirmou que o SARPAS ainda considera a RWY 02/20 – por decisão dele, o verificador continua sem ela.
 2. ~~Limite externo dos setores E/J~~ – resolvido na prática (v4): nesse anel a FRZ começa em 400 ft; abaixo disso não entra. O limite externo continua sem definição na norma, mas só importa para voo com 400 ft ou mais.
 3. Cabeceiras do SJRG (Rio Grande) – desconsiderada por decisão do Marcelo (19/11/2026).
 4. Cabeceiras de SBCO (Canoas) – desconsiderada por decisão do Marcelo (19/11/2026).

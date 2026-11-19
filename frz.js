@@ -9,7 +9,7 @@ const AERODROMOS = [
   { id: 'SBSM', nome: 'Santa Maria', cidade: 'Santa Maria', regra: 'IFR',
     arp: [dms(29,42,39,'S'), dms(53,41,32,'W')],
     pistas: [ { nome: '11/29', cab: [ ['11', dms(29,42,38,'S'), dms(53,42,14,'W')], ['29', dms(29,42,43,'S'), dms(53,40,34,'W')] ] } ],
-    obs: 'RWY 02/20 fechada (SUP N0057) até 26/04/2029 – não considerada.' },
+    obs: 'RWY 02/20 fechada (SUP N0057) até 26/04/2029 – não considerada aqui. Atenção: o SARPAS ainda considera a 02/20, então pode mostrar conflito com a SBSM que este verificador não mostra.' },
   { id: 'SBPA', nome: 'Salgado Filho', cidade: 'Porto Alegre', regra: 'IFR',
     arp: [dms(29,59,41,'S'), dms(51,10,16,'W')],
     pistas: [ { nome: '11/29', cab: [ ['11', dms(29,59,39.79,'S'), dms(51,10,58.82,'W')], ['29', dms(29,59,42.14,'S'), dms(51,8,59.46,'W')] ] } ] },

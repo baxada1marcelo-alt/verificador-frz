@@ -1,5 +1,9 @@
 # Histórico de versões
 
+## v9 – 19/11/2026
+- SBSM: a RWY 02/20 (fechada pelo SUP N0057 até 26/04/2029) continua **fora** do cálculo, por decisão do Sgt Marcelo.
+- O aviso da SBSM agora diz que o SARPAS ainda considera a 02/20 e pode mostrar conflito a mais.
+
 ## v8 – 19/11/2026
 - **Regra da altura conferida no SARPAS** (prints de 19/11/2026, ponto no setor B da SBSM): a 100 ft o SARPAS deu "Aprovação automática"; a 105 ft deu conflito com FRZ e Termo de Coordenação obrigatório.
 - A regra passou de "altura ≥ piso" para **"altura > piso"** (voar exatamente na altura do anel não entra). No anel A/F (desde o solo) qualquer voo entra.
