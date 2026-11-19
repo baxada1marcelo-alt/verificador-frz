@@ -26,6 +26,7 @@ Contexto para o Claude Code trabalhar neste projeto.
 - Áreas P/R/D com limite inferior em AGL: por segurança continua "≥" (não conferido no SARPAS).
 - Último anel (E/J): FRZ a partir de 400 ft; até 400 ft não entra; acima → "confirmar no SARPAS" (limite externo não definido).
 - Área com raio: amostra centro + 2 anéis de 24 pontos e usa o pior caso.
+- Filtro das áreas EAC (v14): só esconde no mapa; o resultado considera SEMPRE todas as áreas (decisão do Marcelo, 19/11/2026).
 - Área em polígono (v13): FRZ pelo contorno (pontos a cada ≤ 5 m) + grade no interior, pior caso; áreas P/R/D por interseção exata dos lados; prazo "> 100 km²" usa a área do polígono.
 - SBSM RWY 02/20 está fechada (SUP N0057, até 26/04/2029) → não considerar enquanto fechada. **Decisão do Marcelo (19/11/2026):** o SARPAS ainda leva a 02/20 em conta, mas o verificador NÃO deve considerar; a página só avisa que o SARPAS pode mostrar conflito a mais.
 - SJRG: cabeceiras não publicadas → resultado "indefinido".

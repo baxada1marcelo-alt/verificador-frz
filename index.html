@@ -111,7 +111,7 @@
 <header>
   <h1>Verificador FRZ e Áreas Restritas – RS</h1>
   <span class="sub">Consulta rápida: o voo do drone entra em Zona de Restrição de Voo? Precisa de Termo de Coordenação?</span>
-  <span class="ver">v13 · 19/11/2026</span>
+  <span class="ver">v14 · 19/11/2026</span>
 </header>
 
 <main>
@@ -181,7 +181,7 @@
 
     <div class="card" style="margin-top:14px" id="filtroCard">
       <h2>Filtro das áreas (EAC)</h2>
-      <div class="hint" style="margin:0 0 8px">Áreas desligadas somem do mapa e <b>não entram na verificação</b>. Use para desligar áreas que hoje não estão ativas (ex.: as "ativadas mediante NOTAM").</div>
+      <div class="hint" style="margin:0 0 8px">Áreas desligadas <b>só somem do mapa</b>. O resultado da verificação <b>continua considerando todas as áreas</b>, mesmo as desligadas (por segurança).</div>
       <div class="ftipos">
         <label><input type="checkbox" data-tipo="P" checked> <i class="sw P"></i>Proibidas</label>
         <label><input type="checkbox" data-tipo="R" checked> <i class="sw R"></i>Restritas</label>
@@ -255,8 +255,8 @@
   </section>
 </main>
 
-<script src="eac-rs.js?v=13"></script>
-<script src="frz.js?v=13"></script>
+<script src="eac-rs.js?v=14"></script>
+<script src="frz.js?v=14"></script>
 <script>
 const $ = id => document.getElementById(id);
 const COR = ['#b3261e','#e5483f','#f08c2a','#f2d03b','#8ccbe8'];
@@ -443,7 +443,8 @@ function verificar(){
   const res = avaliar(c.lat, c.lon, raio, alt, perfilId, poli);
 
   const eacTodas = avaliarEAC(c.lat, c.lon, raio, alt, poli);
-  const eac = eacTodas.filter(e => areaLigada(e.a));
+  // Pedido do Sgt Marcelo (19/11/2026): o filtro só esconde a área no MAPA; o resultado considera sempre todas as áreas.
+  const eac = eacTodas;
   const eacDesligadas = eacTodas.filter(e => !areaLigada(e.a));
   const eP = eac.filter(e => e.status === 'proibida'), eR = eac.filter(e => e.status === 'dentro');
   const eI = eac.filter(e => e.status === 'indef'), eD = eac.filter(e => e.status === 'perigosa');
@@ -476,7 +477,7 @@ function verificar(){
     const tipo = {P:'Área proibida', R:'Área restrita', D:'Área perigosa'}[e.a.tipo];
     const tag = {proibida:['dentro','Proibida'], dentro:['dentro','TCo'], perigosa:['indef','Perigosa'], indef:['indef','Confirmar']}[e.status];
     const conc = {proibida:'Operação vedada (Art. 29, I).', dentro:'Termo de Coordenação obrigatório (Art. 29, II).', perigosa:'Termo de Coordenação dispensado; cabe ao piloto decidir se aceita os riscos (Art. 29, III e parágrafo único).', indef:'Depende da altitude do terreno (limite em AMSL).'}[e.status];
-    return `<tr><td><b>${e.a.id}</b><br><span class="hint">${tipo}</span></td><td class="num">${e.dist===0?(poli?'toca':'dentro'):fmtN(e.dist)+' m'}</td><td>${e.a.inf.txt} até ${e.a.sup.txt}</td><td style="font-size:13px"><b>${e.a.nome}</b>. ${conc}<br><span class="hint">${e.a.rmk}</span></td><td><span class="tag ${tag[0]}">${tag[1]}</span></td></tr>`;
+    return `<tr><td><b>${e.a.id}</b><br><span class="hint">${tipo}${areaLigada(e.a) ? '' : '<br>(oculta no mapa)'}</span></td><td class="num">${e.dist===0?(poli?'toca':'dentro'):fmtN(e.dist)+' m'}</td><td>${e.a.inf.txt} até ${e.a.sup.txt}</td><td style="font-size:13px"><b>${e.a.nome}</b>. ${conc}<br><span class="hint">${e.a.rmk}</span></td><td><span class="tag ${tag[0]}">${tag[1]}</span></td></tr>`;
   }).join('');
 
   const warns = [];
@@ -489,7 +490,7 @@ function verificar(){
     if(res.some(r => r.ad.tipo === 'AD' && !r.incompleto && r.status !== 'fora')) warns.push('Operação no entorno de estrutura perto de aeroporto: "manter-se afastado, no mínimo, 500 metros" (ICA 100-40, Fig. 2, nota 4).');
     if(res.some(r => r.ad.tipo === 'HP' && r.status !== 'fora')) warns.push('Operação no entorno de estrutura perto de heliponto: "manter-se afastado, no mínimo, 200 metros" (ICA 100-40, Fig. 4, nota 4).');
   }
-  if(eacDesligadas.length) warns.push(`<b>Filtro:</b> o voo também toca ${eacDesligadas.map(e => `<b>${e.a.id}</b> ${e.a.nome} (${{P:'proibida',R:'restrita',D:'perigosa'}[e.a.tipo]})`).join(', ')}, mas ${eacDesligadas.length > 1 ? 'essas áreas estão desligadas' : 'essa área está desligada'} no filtro e não ${eacDesligadas.length > 1 ? 'foram consideradas' : 'foi considerada'}. Confirme no NOTAM/SARPAS se ${eacDesligadas.length > 1 ? 'estão' : 'está'} mesmo inativa${eacDesligadas.length > 1 ? 's' : ''}.`);
+  if(eacDesligadas.length) warns.push(`<b>Filtro:</b> ${eacDesligadas.map(e => `<b>${e.a.id}</b>`).join(', ')} ${eacDesligadas.length > 1 ? 'estão ocultas' : 'está oculta'} no mapa pelo filtro, mas <b>${eacDesligadas.length > 1 ? 'foram consideradas' : 'foi considerada'} no resultado</b>. Se a área não estiver ativa no dia (NOTAM), o SARPAS pode não acusar a restrição.`);
   if(eD.length) warns.push(`Área perigosa: ${eD.map(nomeE).join(', ')}. Termo de Coordenação dispensado, mas cabe ao piloto decidir se aceita os possíveis riscos (ICA 100-40, Art. 29, III e parágrafo único).`);
   if(eac.some(e => /NOTAM|SUPLEMENTO|SUPLEMENT|coordena/i.test(e.a.rmk))) warns.push('Algumas áreas acima só ficam ativas por NOTAM, Suplemento AIP ou coordenação com o órgão ATS (veja a observação de cada uma). O SARPAS considera a situação do dia.');
   if(c.assumido) warns.push('Hemisfério não informado: considerei Sul e Oeste. Confira a coordenada.');

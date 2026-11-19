@@ -1,5 +1,9 @@
 # Histórico de versões
 
+## v14 – 19/11/2026
+- **Filtro das áreas (EAC) agora só muda o mapa.** Por decisão do Sgt Marcelo, o resultado considera sempre todas as áreas proibidas, restritas e perigosas, mesmo as desligadas no filtro. Antes, uma área desligada saía do resultado e aparecia só como aviso.
+- Na tabela, a área desligada aparece com a nota "(oculta no mapa)". O aviso do filtro foi reescrito para dizer que ela foi considerada.
+
 ## v13 – 19/11/2026
 - **Área do voo em polígono**, como no SARPAS ("Formato → Polígono"). No topo do formulário há a escolha **Círculo** (ponto + raio, como antes) ou **Polígono**.
 - No polígono, cada clique no mapa marca um ponto (1, 2, 3…). Também dá para digitar as coordenadas, uma por linha, nos mesmos formatos do círculo. Há botões "Desfazer último ponto" e "Apagar pontos". A página mostra a área em m² e km².
