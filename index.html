@@ -43,6 +43,11 @@
   .verdict.fora{background:var(--okbg);border-color:#b5d9c2;color:var(--ok)}
   .verdict.indef{background:var(--warnbg);border-color:#ecd391;color:var(--warn)}
   .verdict .txt{color:var(--ink);font-size:14px}
+  .prazo{border-radius:8px;padding:10px 14px;margin:-6px 0 14px;font-size:13.5px;border:1px solid var(--line);background:#f7f6f2}
+  .prazo.ok{background:var(--okbg);border-color:#b5d9c2}
+  .prazo.nao{background:var(--badbg);border-color:#e5b3ae}
+  .prazo.nao b:first-child{color:var(--bad)}
+  .prazo.ok b:first-child{color:var(--ok)}
   .warns{margin:0 0 14px;padding:0;list-style:none}
   .warns li{background:var(--warnbg);border-left:3px solid #d9a21b;padding:8px 12px;margin-bottom:6px;font-size:13.5px;border-radius:0 6px 6px 0}
   table{width:100%;border-collapse:collapse;font-size:13.5px}
@@ -90,7 +95,7 @@
 <header>
   <h1>Verificador FRZ e Áreas Restritas – RS</h1>
   <span class="sub">Consulta rápida: o voo do drone entra em Zona de Restrição de Voo? Precisa de Termo de Coordenação?</span>
-  <span class="ver">v6 · 19/11/2026</span>
+  <span class="ver">v7 · 19/11/2026</span>
 </header>
 
 <main>
@@ -125,6 +130,10 @@
         <option value="especial">Aérea Especial</option>
         <option value="estrutura">Entorno de estrutura</option>
       </select>
+
+      <label for="inicio">Início do voo <span style="font-weight:400;color:var(--muted)">(opcional)</span></label>
+      <input id="inicio" type="datetime-local">
+      <div class="hint">Preencha para conferir o prazo de antecedência que o SARPAS exige (ICA 100-40, Arts. 56 e 57).</div>
 
       <div class="btns">
         <button class="btn" type="submit">Verificar</button>
@@ -272,6 +281,41 @@ function explicar(r, alt){
   return `Parte mais crítica da área ${onde} – setor <b>${p.setor}</b>, FRZ ${piso}. ${conc}`;
 }
 
+// ===== Prazo de antecedência para pedir no SARPAS (ICA 100-40, Arts. 56 e 57) =====
+// Considera UA com PMD até 25 kg e operação VLOS (casos acima disso pedem 8 dias – Art. 57, III).
+const DIA = 1440; // minutos
+function prazoMinimo(perfilId, alt, raio, intersecao){
+  const areaKm2 = Math.PI * raio * raio / 1e6;
+  if(perfilId === 'especial') return { min: 30, txt: '30 minutos', base: 'Art. 57, I, "d" – Operação Aérea Especial' };
+  if(perfilId === 'atipica') return { min: 8*DIA, txt: '8 dias corridos', base: 'Art. 57, III, "b" – operação Atípica' };
+  if(alt > 400) return { min: 8*DIA, txt: '8 dias corridos', base: 'Art. 57, III, "a", 3 – acima de 400 pés' };
+  if(intersecao) return { min: 4*DIA, txt: '4 dias corridos', base: 'Art. 57, II, "a", 4 – interseção com FRZ ou área restrita (até 400 ft, VLOS, até 25 kg)' };
+  if(perfilId === 'aerolev') return { min: 4*DIA, txt: '4 dias corridos', base: 'Art. 57, II, "b" – aerolevantamento' };
+  if(areaKm2 > 100) return { min: 4*DIA, txt: '4 dias corridos', base: 'Art. 57, II, "c" – área de voo maior que 100 km²' };
+  return { min: 30, txt: '30 minutos', base: 'Art. 57, I – sem interseção com FRZ ou área restrita, até 400 ft, VLOS, até 25 kg' };
+}
+function fmtDuracao(min){
+  const m = Math.abs(Math.round(min)), d = Math.floor(m / DIA), h = Math.floor((m % DIA) / 60), mm = m % 60;
+  return [d ? d + (d > 1 ? ' dias' : ' dia') : '', h ? h + ' h' : '', (!d && mm) ? mm + ' min' : ''].filter(Boolean).join(' ') || '0 min';
+}
+function analisePrazo({ perfilId, alt, raio, proibida, intersecao, talvez, inicio }){
+  if(proibida) return { cls: 'nao', titulo: 'SARPAS: a solicitação não será aceita', txt: 'Interseção com área proibida (ICA 100-40, Art. 56, V).' };
+  let p = prazoMinimo(perfilId, alt, raio, intersecao);
+  let txt = `Antecedência mínima para pedir no SARPAS: <b>${p.txt}</b> antes do início do voo (ICA 100-40, ${p.base}).`;
+  if(!intersecao && talvez && p.min < 4*DIA){
+    const p4 = prazoMinimo(perfilId, alt, raio, true);
+    txt += ` Se o SARPAS confirmar a interseção que ficou indefinida acima, o prazo passa a <b>${p4.txt}</b> (${p4.base}).`;
+    p = p4; // para a conferência da data, usa o caso mais exigente
+  }
+  if(perfilId === 'aeroagricola') txt += ' Aeroagrícola com UA acima de 25 kg, até 100 pés, sem FRZ/área restrita: 30 minutos (Art. 57, § 1º, II).';
+  if(!inicio) return { cls: '', titulo: 'Prazo de antecedência', txt: txt + ' <span class="hint">Preencha "Início do voo" para conferir.</span>' };
+  const falta = (new Date(inicio) - new Date()) / 60000; // minutos até o início
+  if(falta < 0) return { cls: 'nao', titulo: 'SARPAS: não aceito – início no passado', txt: `O início informado já passou. ${txt}` };
+  if(falta < p.min) return { cls: 'nao', titulo: 'SARPAS: não aceito – prazo insuficiente', txt: `O voo começa daqui a ${fmtDuracao(falta)}, mas é preciso pedir com pelo menos <b>${p.txt}</b> de antecedência (ICA 100-40, Art. 56, I e ${p.base}). Mude a data do voo ou ajuste a operação.` };
+  if(falta > 90*DIA) return { cls: 'nao', titulo: 'SARPAS: não aceito – pedido cedo demais', txt: `O voo começa daqui a ${fmtDuracao(falta)}; o pedido não pode ser feito com mais de 90 dias corridos de antecedência (ICA 100-40, Art. 56, II).` };
+  return { cls: 'ok', titulo: 'Prazo de antecedência OK', txt: `O voo começa daqui a ${fmtDuracao(falta)}. ${txt}` };
+}
+
 function verificar(){
   $('errCoord').textContent = '';
   const c = parseCoord($('coord').value);
@@ -343,8 +387,11 @@ function verificar(){
   }).join('');
 
   const gm = `https://www.google.com/maps?q=${c.lat.toFixed(6)},${c.lon.toFixed(6)}`;
+  const pz = analisePrazo({ perfilId, alt, raio, proibida: eP.length > 0,
+    intersecao: dentro.length > 0 || eR.length > 0, talvez: indef.length > 0 || eI.length > 0, inicio: $('inicio').value });
   $('out').innerHTML = `
     <div class="verdict ${cls}"><div class="big">${big}</div><div class="txt">${txt}</div></div>
+    <div class="prazo ${pz.cls}"><b>${pz.titulo}</b><br>${pz.txt}</div>
     ${warns.length ? '<ul class="warns">'+warns.map(w=>'<li>'+w+'</li>').join('')+'</ul>' : ''}
     <div style="font-size:13px;margin-bottom:8px">Ponto: <span class="mono">${c.lat.toFixed(5)}, ${c.lon.toFixed(5)}</span> · <span class="mono">${dmsTxt(c.lat,'N','S')} ${dmsTxt(c.lon,'E','W')}</span> · ${alt} ft (${fmtN(ftToM(alt))} m) · raio ${fmtN(raio)} m · ${PERFIS[perfilId].nome} · <a class="gm" href="${gm}" target="_blank" rel="noopener">ver no Google Maps</a></div>
     ${res.length ? `<table><thead><tr><th>Local</th><th>Distância</th><th>Zona</th><th>Explicação</th><th></th></tr></thead><tbody>${linhas}</tbody></table>` : ''}
@@ -629,6 +676,7 @@ $('limpar').addEventListener('click', () => {
   $('coord').value = '';
   $('alt').value = 200; $('altm').textContent = '≈ 61 m acima do solo';
   $('raio').value = 0;
+  $('inicio').value = '';
   const mudouPerfil = $('perfil').value !== 'recreativa';
   $('perfil').value = 'recreativa';
   $('errCoord').textContent = '';

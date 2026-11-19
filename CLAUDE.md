@@ -27,6 +27,7 @@ Contexto para o Claude Code trabalhar neste projeto.
 - Área com raio: amostra centro + 2 anéis de 24 pontos e usa o pior caso.
 - SBSM RWY 02/20 está fechada (SUP N0057, até 26/04/2029) → não considerar enquanto fechada.
 - SJRG: cabeceiras não publicadas → resultado "indefinido".
+- **Prazo de antecedência** (Arts. 56 e 57): 30 min sem FRZ/área restrita; 4 dias com interseção (ou aerolevantamento, ou área > 100 km²); 8 dias acima de 400 ft ou Atípica; Aérea Especial 30 min. Considera UA ≤ 25 kg e VLOS. Conferido com print do SARPAS em 19/11/2026 (SDWY, 390 ft: SARPAS "Não aceito – prazo insuficiente").
 
 ## Regras de trabalho
 - **Não inventar.** Toda regra deve vir da legislação (ICA 100-40/2026, RBAC-E 94, RBAC 100, Resolução ANAC 806/2026) ou de fonte oficial (AISWEB/DECEA). Se houver dúvida, perguntar ao Marcelo e avisar que não há certeza.

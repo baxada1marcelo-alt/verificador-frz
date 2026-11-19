@@ -1,5 +1,9 @@
 # Histórico de versões
 
+## v7 – 19/11/2026
+- Comparado com o SARPAS (print de 19/11/2026, ponto em Santa Maria a 390 ft, heliponto SDWY): a detecção de FRZ coincide; o "Não aceito" do SARPAS vinha do **prazo de antecedência**.
+- Novo campo opcional **"Início do voo"** e quadro **"Prazo de antecedência"** (ICA 100-40, Arts. 56 e 57): 30 min / 4 dias / 8 dias conforme o caso; avisa "SARPAS: não aceito – prazo insuficiente", início no passado, pedido com mais de 90 dias e área proibida (Art. 56, V).
+
 ## v6 – 19/11/2026
 - **Filtro das áreas (EAC)**: liga/desliga por tipo (Proibidas, Restritas, Perigosas) e área por área, com busca e botões "Ligar todas", "Desligar todas" e "Desligar as mediante NOTAM".
 - Área desligada some do mapa e não entra na verificação; se o voo tocar uma área desligada, a página avisa ("Filtro: ... não foi considerada").
